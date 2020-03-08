@@ -124,6 +124,11 @@ type
       result := layers.back();
       end;
    
+      function get_model(): function (input_data: Vector<real>): Vector<real>;
+      begin
+        result := self.run;
+      end;
+      
       // TrainingSetSize Exception
       procedure learn(input_data: Vector<Vector<real>>; 
                       output_data: Vector<Vector<real>>;
