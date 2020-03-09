@@ -1,135 +1,146 @@
 ﻿unit vector_math;
 
 type 
-  Vector<T> = class
+  Vector = class
     private
-      vector: array of T;
     public
-      property Element[index: integer]: T read self.vector[index] 
-                                          write self.vector[index] := value;
-                                          default;
+      coordinates: array of real;
+    
+      property Element[index: integer]: real read self.coordinates[index] 
+                                             write self.coordinates[index] := value;
+                                             default;
                                           
-      constructor Create(params list_of_values: array of T);
+      constructor Create(params list_of_values: array of real);
       begin
-        self.vector := list_of_values;
+        self.coordinates := list_of_values;
       end;
-      constructor Create(list_of_values: List<T>);
+      constructor Create(list_of_values: List<real>);
       begin
-        self.vector := list_of_values.ToArray;
+        self.coordinates := list_of_values.ToArray;
       end;
       
-      function dot(other_vector: Vector<real>): real;
+      function dot(other_coordinates: Vector): real;
       begin
         result := 0.0;
-        for var index := 0 to self.vector.Length-1 do
+        for var index := 0 to self.coordinates.Length-1 do
           begin
-            var operand_1 := real.Parse(self.vector[index].ToString);
-            var operand_2 := other_vector[index];
+            var operand_1 := real.Parse(self.coordinates[index].ToString);
+            var operand_2 := other_coordinates[index];
             result += operand_1 * operand_2;
           end;
       end;
       
-      static function operator-(self_vector, other_vector: Vector<T>): Vector<real>;
+      function sum(): real;
+      begin
+        result := 0.0;
+        for var index := 0 to self.coordinates.Length-1 do
+          begin
+            var operand_1 := real.Parse(self.coordinates[index].ToString);
+            result += operand_1;
+          end;
+      end;
+      
+      static function operator-(self_coordinates, other_coordinates: Vector): Vector;
       begin
         var tmp_result := new List<real>;
-        for var index := 0 to self_vector.size-1 do
+        for var index := 0 to self_coordinates.size-1 do
         begin
-          var operand_1 := real.Parse(self_vector[index].ToString);
-          var operand_2 := real.Parse(other_vector[index].ToString);
+          var operand_1 := real.Parse(self_coordinates[index].ToString);
+          var operand_2 := real.Parse(other_coordinates[index].ToString);
           tmp_result.add(operand_1 - operand_2);
         end;
-        result := new Vector<real>(tmp_result);
+        result := new Vector(tmp_result);
       end;
 
-      static function operator+(self_vector, other_vector: Vector<T>): Vector<real>;
+      static function operator+(self_coordinates, other_coordinates: Vector): Vector;
       begin
         var tmp_result := new List<real>;
-        for var index := 0 to self_vector.size-1 do
+        for var index := 0 to self_coordinates.size-1 do
         begin
-          var operand_1 := real.Parse(self_vector[index].ToString);
-          var operand_2 := real.Parse(other_vector[index].ToString);
+          var operand_1 := real.Parse(self_coordinates[index].ToString);
+          var operand_2 := real.Parse(other_coordinates[index].ToString);
           tmp_result.add(operand_1 + operand_2);
         end;
-        result := new Vector<real>(tmp_result);
+        result := new Vector(tmp_result);
       end;  
-      static function operator+(self_vector: Vector<T>; other_operand: T): Vector<real>;
+      static function operator+(self_coordinates: Vector; other_operand: real): Vector;
       begin
         var tmp_result := new List<real>;
         var operand_2 := real.Parse(other_operand.ToString);
-        for var index := 0 to self_vector.size-1 do
+        for var index := 0 to self_coordinates.size-1 do
         begin
-          var operand_1 := real.Parse(self_vector[index].ToString);
+          var operand_1 := real.Parse(self_coordinates[index].ToString);
           tmp_result.add(operand_1 + operand_2);
         end;
-        result := new Vector<real>(tmp_result);
+        result := new Vector(tmp_result);
       end;
       
-      static function operator*(self_vector, other_vector: Vector<T>): Vector<real>;
+      static function operator*(self_coordinates, other_coordinates: Vector): Vector;
       begin
-        var tmp_result := new List<real>;
-        if other_vector.size() = 1 then
+        var tmp_result := new List<real>(other_coordinates.size());
+        if other_coordinates.size() = 1 then
         begin
-          var operand_2 := real.Parse(other_vector[0].ToString);
-          for var index := 0 to self_vector.size-1 do
+          var operand_2 := real.Parse(other_coordinates[0].ToString);
+          for var index := 0 to self_coordinates.size-1 do
           begin
-            var operand_1 := real.Parse(self_vector[index].ToString);
+            var operand_1 := real.Parse(self_coordinates[index].ToString);
             tmp_result.add(operand_1 * operand_2);
           end;
         end
         else
-          for var index := 0 to self_vector.size-1 do
+          for var index := 0 to self_coordinates.size-1 do
           begin
-            var operand_1 := real.Parse(self_vector[index].ToString);
-            var operand_2 := real.Parse(other_vector[index].ToString);
+            var operand_1 := real.Parse(self_coordinates[index].ToString);
+            var operand_2 := real.Parse(other_coordinates[index].ToString);
             tmp_result.add(operand_1 * operand_2);
           end;
-        result := new Vector<real>(tmp_result);
+        result := new Vector(tmp_result);
       end;      
-      static function operator*(self_vector: Vector<T>; other_operand: T): Vector<real>;
+      static function operator*(self_coordinates: Vector; other_operand: real): Vector;
       begin
         var tmp_result := new List<real>;
         var operand_2 := real.Parse(other_operand.ToString);
-        for var index := 0 to self_vector.size-1 do
+        for var index := 0 to self_coordinates.size-1 do
         begin
-          var operand_1 := real.Parse(self_vector[index].ToString);
+          var operand_1 := real.Parse(self_coordinates[index].ToString);
           tmp_result.add(operand_1 * operand_2);
         end;
-        result := new Vector<real>(tmp_result);
+        result := new Vector(tmp_result);
       end;
 
-      static function operator**(self_vector: Vector<T>; number: T): Vector<real>;
+      static function operator**(self_coordinates: Vector; number: real): Vector;
       begin
         var tmp_result := new List<real>;
         var operand_2 := real.Parse(number.ToString);
-        for var index := 0 to self_vector.size-1 do
+        for var index := 0 to self_coordinates.size-1 do
         begin
-          var operand_1 := real.Parse(self_vector[index].ToString);
+          var operand_1 := real.Parse(self_coordinates[index].ToString);
           tmp_result.add(operand_1 ** operand_2);
         end;
-        result := new Vector<real>(tmp_result);
+        result := new Vector(tmp_result);
       end;
          
-      function back(): T;
+      function back(): real;
       begin
-        result := self.vector[self.vector.Length-1];
+        result := self.coordinates[self.coordinates.Length-1];
       end;
       
-      procedure push_back(x: T);
+      procedure push_back(x: real);
       begin
-        self.vector := self.vector.append(x).ToArray;  
+        self.coordinates := self.coordinates.append(x).ToArray;  
       end;
       
       function size(): integer;
       begin
-        result := self.vector.Length;
+        result := self.coordinates.Length;
       end;
       
       function ToString: string; override;
       begin
         result := 'Vector(';
-        for var index := 0 to self.vector.Length-2 do
-          result += self.vector[index].ToString + ', ';
-        result += self.vector[self.vector.Length-1].ToString + ')';
+        for var index := 0 to self.coordinates.Length-2 do
+          result += self.coordinates[index].ToString + ', ';
+        result += ((self.coordinates.Length>0)?self.coordinates[self.coordinates.Length-1].ToString:'') + ')';
       end;
   end;
 

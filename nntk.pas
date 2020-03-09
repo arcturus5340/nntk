@@ -4,13 +4,13 @@ uses vector_math;
 type 
   Neuron = class
     private
-      weights: Vector<real>; 
-      input: Vector<real>;
+      weights: Vector; 
+      input: Vector;
       alpha: real = 0.01;
       
-      function initialize_weights(number_of_weights: integer): Vector<real>;
+      function initialize_weights(number_of_weights: integer): Vector;
       begin
-        result := new Vector<real>;
+        result := new Vector;
         for var index := 0 to number_of_weights-1 do
         begin
           // Random weight [0, 1)
@@ -32,13 +32,13 @@ type
         self.weights := initialize_weights(number_of_inputs);
       end;
       
-      function calculate(input: Vector<real>): real;
+      function calculate(input: Vector): real;
       begin
         self.input := input;
         result := self.weights.dot(self.input);
       end;
 
-      function backprop(input: real): Vector<real>;
+      function backprop(input: real): Vector;
       begin
         result := self.weights * input;
       end;
@@ -63,16 +63,16 @@ type
           self.layer.add(new Neuron(number_of_weights));
       end;
       
-      function calculate(input: Vector<real>): Vector<real>;
+      function calculate(input: Vector): Vector;
       begin
-        result := new Vector<real>;
+        result := new Vector;
         for var index := 0 to self.layer.Count-1 do
         begin
           result.push_back(self.layer[index].calculate(input)) 
         end;
       end;
       
-      function backprop(input: Vector<real>): Vector<real>;
+      function backprop(input: Vector): Vector;
       begin
         result := self.layer[0].backprop(input[0]);
         for var index := 1 to self.layer.Count-1 do
@@ -81,7 +81,7 @@ type
         end;
       end;
       
-      procedure adjust_weights(delta: Vector<real>);
+      procedure adjust_weights(delta: Vector);
       begin
         for var index := 0 to self.layer.Count-1 do
         begin  
@@ -107,46 +107,53 @@ type
       number_of_layers: integer;
       
     public
-      constructor Create(neural_network_topology: Vector<integer>);
+      constructor Create(neural_network_topology: Vector);
       begin
         self.neural_network := new List<Layer>;
         self.number_of_layers := neural_network_topology.size();
         for var index := 1 to number_of_layers-1 do
-          self.neural_network.add(new Layer(neural_network_topology[index], 
-                                            neural_network_topology[index-1]));
+          self.neural_network.add(new Layer(trunc(neural_network_topology[index]), 
+                                            trunc(neural_network_topology[index-1])));
       end;
       
-      function run(input_data: Vector<real>): Vector<real>;
+      function run(input_data: Vector): Vector;
+      var x : array of real := (1, 2, 3);
       begin
-      var layers := new Vector<Vector<real>>(input_data);
+      var layers := new List<Vector>;
+      layers.Add(input_data);
       for var i := 0 to self.number_of_layers-2 do
-        layers.push_back(activation_function(self.neural_network[i].calculate(layers.back())));
-      result := layers.back();
+        layers.add(activation_function(self.neural_network[i].calculate(layers.Last)));
+      result := layers.last();
       end;
    
-      function get_model(): function (input_data: Vector<real>): Vector<real>;
+      function get_model(): function (input_data: Vector): Vector;
       begin
         result := self.run;
       end;
       
       // TrainingSetSize Exception
-      procedure learn(input_data: Vector<Vector<real>>; 
-                      output_data: Vector<Vector<real>>;
+      procedure learn(input_data: List<Vector>; 
+                      output_data: List<Vector>;
                       number_of_epoch: integer);
       begin
-        for var epoch := 0 to number_of_epoch-1 do
-          for var index := 0 to input_data.size-1 do
+        var error := 0.0;
+        for var epoch := 1 to number_of_epoch do
+          begin
+          for var index := 0 to input_data.Count-1 do
             begin
-              var layers := new Vector<Vector<real>>(input_data[index]);
+              var layers := new List<Vector>; 
+              layers.add(input_data[index]);
               for var i := 0 to self.number_of_layers-2 do
-                layers.push_back(activation_function(self.neural_network[i].calculate(layers.back())));
+                layers.add(activation_function(self.neural_network[i].calculate(layers.Last())));
 //              println('Layers: ', layers);
-              println('Error: ', (output_data[index]-layers.back()) ** 2, '[', layers.back(), ']');
-
-              var deltas := new Vector<Vector<real>>(output_data[index]-layers.back());
+              if epoch mod 10 = 0 then
+                error += ((output_data[index]-layers.last()) ** 2).sum();
+              
+              var deltas := new List<Vector>; 
+              deltas.add(output_data[index]-layers.last());
               for var i := 1 to self.number_of_layers-2 do
                 begin
-                deltas.push_back(self.neural_network[self.number_of_layers-i-1].backprop(deltas.back())
+                deltas.add(self.neural_network[self.number_of_layers-i-1].backprop(deltas.last())
                                * activation_function_derivative(layers[self.number_of_layers-i-1]));
                 end;  
 //              println('Deltas: ', deltas);
@@ -154,11 +161,17 @@ type
               for var i := 0 to self.number_of_layers-2 do
                 self.neural_network[i].adjust_weights(deltas[self.number_of_layers-2-i]);
             end;
+          if epoch mod 10 = 0 then
+            begin
+            println('Error: ', error / input_data.Count);
+            error := 0.0;
+            end;
+          end;
       end;
             
-      function activation_function(input: Vector<real>): Vector<real>;
+      function activation_function(input: Vector): Vector;
       begin
-        result := new Vector<real>;
+        result := new Vector;
         for var index := 0 to input.size-1 do
           if input[index] > 0 then
             result.push_back(input[index])
@@ -166,9 +179,9 @@ type
             result.push_back(0);
       end; 
 
-      function activation_function_derivative(input: Vector<real>): Vector<real>;
+      function activation_function_derivative(input: Vector): Vector;
       begin
-        result := new Vector<real>;
+        result := new Vector;
         for var index := 0 to input.size-1 do
           if input[index] > 0 then
             result.push_back(1)
