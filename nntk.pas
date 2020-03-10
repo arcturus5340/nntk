@@ -117,7 +117,6 @@ type
       end;
       
       function run(input_data: Vector): Vector;
-      var x : array of real := (1, 2, 3);
       begin
       var layers := new List<Vector>;
       layers.Add(input_data);

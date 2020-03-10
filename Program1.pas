@@ -1,8 +1,5 @@
 ﻿uses nntk, vector_math;
 
-var
-  my_model: function(input: Vector): Vector;
-  
 begin
 //  var ipt := new Vector<Vector>;
 //  foreach var str in ReadallLines('images.txt') do

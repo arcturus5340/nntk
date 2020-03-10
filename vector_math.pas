@@ -3,9 +3,78 @@
 type 
   Vector = class
     private
-    public
-      coordinates: array of real;
+      coordinates: array of real; 
+      
+      static function __add(self_vector, other_vector: Vector): Vector;
+      var 
+        tmp_result: array of real;
+      begin
+        tmp_result := new real[self_vector.size()];
+        tmp_result.Initialize();
+        for var index := 0 to self_vector.size-1 do
+        begin
+          var operand_1 := self_vector[index];
+          var operand_2 := other_vector[index];
+          tmp_result[index] := operand_1 + operand_2;
+        end;
+        result := new Vector(tmp_result);
+      end;
+      
+      static function __sub(self_vector, other_vector: Vector): Vector;
+      var 
+        tmp_result: array of real;
+      begin
+        tmp_result := new real[self_vector.size()];
+        tmp_result.Initialize();
+        for var index := 0 to self_vector.size-1 do
+        begin
+          var operand_1 := self_vector[index];
+          var operand_2 := other_vector[index];
+          tmp_result[index] := operand_1 - operand_2;
+        end;
+        result := new Vector(tmp_result);
+      end;
+      
+      static function __mul(self_vector, other_vector: Vector): Vector;
+      var
+        tmp_result: array of real;
+      begin
+        tmp_result := new real[self_vector.size()];
+        tmp_result.Initialize();
+        if other_vector.size() = 1 then
+        begin
+          var operand_2 := other_vector[0];
+          for var index := 0 to self_vector.size-1 do
+          begin
+            var operand_1 := self_vector[index];
+            tmp_result[index] := operand_1 * operand_2;
+          end;
+        end
+        else
+          for var index := 0 to self_vector.size-1 do
+          begin
+            var operand_1 := self_vector[index];
+            var operand_2 := other_vector[index];
+            tmp_result[index] := operand_1 * operand_2;
+          end;
+        result := new Vector(tmp_result);
+      end;
+      
+      static function __pow(self_vector: Vector; exponent: real): Vector;
+      var 
+        tmp_result: array of real;
+      begin
+        tmp_result := new real[self_vector.size()];
+        tmp_result.Initialize();
+        for var index := 0 to self_vector.size-1 do
+        begin
+          var operand_1 := self_vector[index];
+          tmp_result[index] := operand_1 ** exponent;
+        end;
+        result := new Vector(tmp_result);
+      end;
     
+    public
       property Element[index: integer]: real read self.coordinates[index] 
                                              write self.coordinates[index] := value;
                                              default;
@@ -19,13 +88,13 @@ type
         self.coordinates := list_of_values.ToArray;
       end;
       
-      function dot(other_coordinates: Vector): real;
+      function dot(other_vector: Vector): real;
       begin
         result := 0.0;
         for var index := 0 to self.coordinates.Length-1 do
           begin
-            var operand_1 := real.Parse(self.coordinates[index].ToString);
-            var operand_2 := other_coordinates[index];
+            var operand_1 := self.coordinates[index];
+            var operand_2 := other_vector[index];
             result += operand_1 * operand_2;
           end;
       end;
@@ -35,89 +104,34 @@ type
         result := 0.0;
         for var index := 0 to self.coordinates.Length-1 do
           begin
-            var operand_1 := real.Parse(self.coordinates[index].ToString);
+            var operand_1 := self.coordinates[index];
             result += operand_1;
           end;
       end;
       
-      static function operator-(self_coordinates, other_coordinates: Vector): Vector;
+      static function operator+(self_vector, other_vector: Vector): Vector;
       begin
-        var tmp_result := new List<real>;
-        for var index := 0 to self_coordinates.size-1 do
-        begin
-          var operand_1 := real.Parse(self_coordinates[index].ToString);
-          var operand_2 := real.Parse(other_coordinates[index].ToString);
-          tmp_result.add(operand_1 - operand_2);
-        end;
-        result := new Vector(tmp_result);
-      end;
-
-      static function operator+(self_coordinates, other_coordinates: Vector): Vector;
-      begin
-        var tmp_result := new List<real>;
-        for var index := 0 to self_coordinates.size-1 do
-        begin
-          var operand_1 := real.Parse(self_coordinates[index].ToString);
-          var operand_2 := real.Parse(other_coordinates[index].ToString);
-          tmp_result.add(operand_1 + operand_2);
-        end;
-        result := new Vector(tmp_result);
+        result := __add(self_vector, other_vector);
       end;  
-      static function operator+(self_coordinates: Vector; other_operand: real): Vector;
+      
+      static function operator-(self_vector, other_vector: Vector): Vector;
       begin
-        var tmp_result := new List<real>;
-        var operand_2 := real.Parse(other_operand.ToString);
-        for var index := 0 to self_coordinates.size-1 do
-        begin
-          var operand_1 := real.Parse(self_coordinates[index].ToString);
-          tmp_result.add(operand_1 + operand_2);
-        end;
-        result := new Vector(tmp_result);
+        result := __sub(self_vector, other_vector);
       end;
       
-      static function operator*(self_coordinates, other_coordinates: Vector): Vector;
+      static function operator*(self_vector, other_vector: Vector): Vector;
       begin
-        var tmp_result := new List<real>(other_coordinates.size());
-        if other_coordinates.size() = 1 then
-        begin
-          var operand_2 := real.Parse(other_coordinates[0].ToString);
-          for var index := 0 to self_coordinates.size-1 do
-          begin
-            var operand_1 := real.Parse(self_coordinates[index].ToString);
-            tmp_result.add(operand_1 * operand_2);
-          end;
-        end
-        else
-          for var index := 0 to self_coordinates.size-1 do
-          begin
-            var operand_1 := real.Parse(self_coordinates[index].ToString);
-            var operand_2 := real.Parse(other_coordinates[index].ToString);
-            tmp_result.add(operand_1 * operand_2);
-          end;
-        result := new Vector(tmp_result);
+        result := __mul(self_vector, other_vector);
       end;      
-      static function operator*(self_coordinates: Vector; other_operand: real): Vector;
+      
+      static function operator*(self_vector: Vector; other_operand: real): Vector;
       begin
-        var tmp_result := new List<real>;
-        var operand_2 := real.Parse(other_operand.ToString);
-        for var index := 0 to self_coordinates.size-1 do
-        begin
-          var operand_1 := real.Parse(self_coordinates[index].ToString);
-          tmp_result.add(operand_1 * operand_2);
-        end;
-        result := new Vector(tmp_result);
+        result := __mul(self_vector, new Vector(other_operand));
       end;
 
-      static function operator**(self_coordinates: Vector; number: real): Vector;
+      static function operator**(self_vector: Vector; exponent: real): Vector;
       begin
-        var tmp_result := new List<real>;
-        var operand_2 := real.Parse(number.ToString);
-        for var index := 0 to self_coordinates.size-1 do
-        begin
-          var operand_1 := real.Parse(self_coordinates[index].ToString);
-          tmp_result.add(operand_1 ** operand_2);
-        end;
-        result := new Vector(tmp_result);
+        result := __pow(self_vector, exponent);
       end;
          
       function back(): real;
@@ -127,7 +141,7 @@ type
       
       procedure push_back(x: real);
       begin
-        self.coordinates := self.coordinates.append(x).ToArray;  
+        self.coordinates := self.coordinates.Append(x).ToArray();  
       end;
       
       function size(): integer;
