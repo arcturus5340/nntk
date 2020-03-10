@@ -52,15 +52,15 @@ type
 type 
   Layer = class
     private
-      layer: List<Neuron>;
+      layer: array of Neuron;
       
     public
       constructor Create(number_of_neurons: integer; 
                          number_of_weights: integer);
       begin
-        self.layer := new list<Neuron>;
+        self.layer := new Neuron[number_of_neurons];
         for var index := 0 to number_of_neurons-1 do
-          self.layer.add(new Neuron(number_of_weights));
+          self.layer[index] := new Neuron(number_of_weights);
       end;
       
       function calculate(input: Vector): Vector;
@@ -103,26 +103,26 @@ type
 type
   Neural_Network = class
     private
-      neural_network: List<Layer>;
+      neural_network: array of Layer;
       number_of_layers: integer;
       
     public
       constructor Create(neural_network_topology: Vector);
       begin
-        self.neural_network := new List<Layer>;
         self.number_of_layers := neural_network_topology.size();
+        self.neural_network := new Layer[number_of_layers-1];
         for var index := 1 to number_of_layers-1 do
-          self.neural_network.add(new Layer(trunc(neural_network_topology[index]), 
-                                            trunc(neural_network_topology[index-1])));
+          self.neural_network[index-1] := new Layer(trunc(neural_network_topology[index]), 
+                                                    trunc(neural_network_topology[index-1]));
       end;
       
       function run(input_data: Vector): Vector;
       begin
-      var layers := new List<Vector>;
-      layers.Add(input_data);
+      var layers := new Vector[self.number_of_layers];
+      layers[0] :=input_data;
       for var i := 0 to self.number_of_layers-2 do
-        layers.add(activation_function(self.neural_network[i].calculate(layers.Last)));
-      result := layers.last();
+        layers[i+1] := activation_function(self.neural_network[i].calculate(layers[i]));
+      result := layers[self.number_of_layers-1];
       end;
    
       function get_model(): function (input_data: Vector): Vector;
@@ -134,27 +134,29 @@ type
       procedure learn(input_data: List<Vector>; 
                       output_data: List<Vector>;
                       number_of_epoch: integer);
+      var
+        deltas: array of Vector;
+        layer: array of Vector;
+        error: real;
       begin
-        var error := 0.0;
+        deltas := new Vector[self.number_of_layers-1];
+        println(neural_network);
         for var epoch := 1 to number_of_epoch do
           begin
           for var index := 0 to input_data.Count-1 do
             begin
-              var layers := new List<Vector>; 
-              layers.add(input_data[index]);
+              var layers := new Vector[self.number_of_layers]; 
+              layers[0] := input_data[index];
               for var i := 0 to self.number_of_layers-2 do
-                layers.add(activation_function(self.neural_network[i].calculate(layers.Last())));
-//              println('Layers: ', layers);
+                layers[i+1] := activation_function(self.neural_network[i].calculate(layers[i]));
+              
               if epoch mod 10 = 0 then
                 error += ((output_data[index]-layers.last()) ** 2).sum();
               
-              var deltas := new List<Vector>; 
-              deltas.add(output_data[index]-layers.last());
+              deltas[0] := output_data[index]-layers.last();
               for var i := 1 to self.number_of_layers-2 do
-                begin
-                deltas.add(self.neural_network[self.number_of_layers-i-1].backprop(deltas.last())
-                               * activation_function_derivative(layers[self.number_of_layers-i-1]));
-                end;  
+                deltas[i] := self.neural_network[self.number_of_layers-i-1].backprop(deltas[i-1])
+                                               * activation_function_derivative(layers[self.number_of_layers-i-1]);
 //              println('Deltas: ', deltas);
 
               for var i := 0 to self.number_of_layers-2 do

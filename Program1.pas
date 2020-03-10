@@ -1,4 +1,4 @@
-﻿uses nntk, vector_math;
+﻿ uses nntk, vector_math;
 
 begin
 //  var ipt := new Vector<Vector>;
