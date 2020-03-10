@@ -125,6 +125,12 @@ type
         self.coordinates := self.coordinates.Append(x).ToArray();  
       end;
       
+      procedure set_size(x: integer);
+      begin
+        SetLength(self.coordinates, x);
+        self.coordinates.Initialize();
+      end;
+      
       function size(): integer;
       begin
         result := self.coordinates.Length;
