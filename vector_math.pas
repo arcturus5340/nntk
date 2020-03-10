@@ -11,12 +11,9 @@ type
       begin
         tmp_result := new real[self_vector.size()];
         tmp_result.Initialize();
+        {$omp parallel for}
         for var index := 0 to self_vector.size-1 do
-        begin
-          var operand_1 := self_vector[index];
-          var operand_2 := other_vector[index];
-          tmp_result[index] := operand_1 + operand_2;
-        end;
+          tmp_result[index] := self_vector[index] + other_vector[index];
         result := new Vector(tmp_result);
       end;
       
@@ -26,12 +23,9 @@ type
       begin
         tmp_result := new real[self_vector.size()];
         tmp_result.Initialize();
+        {$omp parallel for}
         for var index := 0 to self_vector.size-1 do
-        begin
-          var operand_1 := self_vector[index];
-          var operand_2 := other_vector[index];
-          tmp_result[index] := operand_1 - operand_2;
-        end;
+          tmp_result[index] := self_vector[index] - other_vector[index];
         result := new Vector(tmp_result);
       end;
       
@@ -42,21 +36,13 @@ type
         tmp_result := new real[self_vector.size()];
         tmp_result.Initialize();
         if other_vector.size() = 1 then
-        begin
-          var operand_2 := other_vector[0];
+          {$omp parallel for}
           for var index := 0 to self_vector.size-1 do
-          begin
-            var operand_1 := self_vector[index];
-            tmp_result[index] := operand_1 * operand_2;
-          end;
-        end
+            tmp_result[index] := self_vector[index] * other_vector[0]
         else
+          {$omp parallel for}
           for var index := 0 to self_vector.size-1 do
-          begin
-            var operand_1 := self_vector[index];
-            var operand_2 := other_vector[index];
-            tmp_result[index] := operand_1 * operand_2;
-          end;
+            tmp_result[index] := self_vector[index] * other_vector[index];
         result := new Vector(tmp_result);
       end;
       
@@ -66,11 +52,9 @@ type
       begin
         tmp_result := new real[self_vector.size()];
         tmp_result.Initialize();
+        {$omp parallel for}
         for var index := 0 to self_vector.size-1 do
-        begin
-          var operand_1 := self_vector[index];
-          tmp_result[index] := operand_1 ** exponent;
-        end;
+          tmp_result[index] := self_vector[index] ** exponent;
         result := new Vector(tmp_result);
       end;
     
@@ -90,7 +74,7 @@ type
       
       function dot(other_vector: Vector): real;
       begin
-        result := 0.0;
+        {$omp parallel for reduction(+:result)}
         for var index := 0 to self.coordinates.Length-1 do
           begin
             var operand_1 := self.coordinates[index];
@@ -101,12 +85,9 @@ type
       
       function sum(): real;
       begin
-        result := 0.0;
+        {$omp parallel for reduction(+:result)}
         for var index := 0 to self.coordinates.Length-1 do
-          begin
-            var operand_1 := self.coordinates[index];
-            result += operand_1;
-          end;
+          result += self.coordinates[index];
       end;
       
       static function operator+(self_vector, other_vector: Vector): Vector;
