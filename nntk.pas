@@ -108,6 +108,53 @@ type
       neural_network: array of Layer;
       number_of_layers: integer;
       
+      procedure __train(input_data: List<Vector>; 
+                        output_data: List<Vector>;
+                        number_of_epoch: integer);
+      var
+        deltas: array of Vector;
+        layers: array of Vector;
+        mask: array of Vector;
+        error: real;
+      begin
+        deltas := new Vector[self.number_of_layers-1];
+//        println(neural_network);
+        for var epoch := 1 to number_of_epoch do
+        begin  
+          for var index := 0 to input_data.count-1 do
+            begin
+              layers := new Vector[self.number_of_layers]; 
+              mask := new Vector[self.number_of_layers-1];
+              layers[0] := input_data[index];
+              for var i := 0 to self.number_of_layers-2 do
+                begin
+                layers[i+1] := activation_function(self.neural_network[i].calculate(layers[i]));
+                mask[i] := dropout_mask(layers[i+1].size());
+                layers[i+1] := layers[i+1] * mask[i];
+                layers[i+1] := layers[i+1] * 2;
+                end;
+              
+              if epoch mod 10 = 0 then
+                error += ((output_data[index]-layers.last()) ** 2).sum();
+              
+              deltas[0] := output_data[index]-layers.last();
+              for var i := 1 to self.number_of_layers-2 do
+                deltas[i] := self.neural_network[self.number_of_layers-i-1].backprop(deltas[i-1])
+                                               * activation_function_derivative(layers[self.number_of_layers-i-1])
+                                               * mask[self.number_of_layers-i-2];
+//              println('Deltas: ', deltas);
+
+              for var i := 0 to self.number_of_layers-2 do
+                self.neural_network[i].adjust_weights(deltas[self.number_of_layers-2-i]);
+            end;
+          if epoch mod 10 = 0 then
+            begin
+            println('Error: ', error / input_data.count);
+            error := 0.0;
+            end;
+          end;
+      end;
+      
     public
       constructor Create(neural_network_topology: Vector);
       begin
@@ -119,6 +166,21 @@ type
                                                     trunc(neural_network_topology[index-1]));
       end;
       
+      procedure train(input_data: List<Vector>; 
+                      output_data: List<Vector>;
+                      number_of_epoch: integer);
+      begin
+        __train(input_data, output_data, number_of_epoch);  
+      end;
+      procedure train(input_data: array of Vector; 
+                      output_data: array of Vector;
+                      number_of_epoch: integer);
+      begin
+        __train(new List<Vector>(input_data), 
+                new List<Vector>(output_data), 
+                number_of_epoch);
+      end;
+
       function run(input_data: Vector): Vector;
       begin
       var layers := new Vector[self.number_of_layers];
@@ -134,46 +196,6 @@ type
         result := self.run;
       end;
       
-      // TrainingSetSize Exception
-      procedure learn(input_data: List<Vector>; 
-                      output_data: List<Vector>;
-                      number_of_epoch: integer);
-      var
-        deltas: array of Vector;
-        layers: array of Vector;
-        error: real;
-      begin
-        deltas := new Vector[self.number_of_layers-1];
-//        println(neural_network);
-        for var epoch := 1 to number_of_epoch do
-        begin  
-          for var index := 0 to input_data.count-1 do
-            begin
-              layers := new Vector[self.number_of_layers]; 
-              layers[0] := input_data[index];
-              for var i := 0 to self.number_of_layers-2 do
-                layers[i+1] := activation_function(self.neural_network[i].calculate(layers[i]));
-              
-              if epoch mod 10 = 0 then
-                error += ((output_data[index]-layers.last()) ** 2).sum();
-              
-              deltas[0] := output_data[index]-layers.last();
-              for var i := 1 to self.number_of_layers-2 do
-                deltas[i] := self.neural_network[self.number_of_layers-i-1].backprop(deltas[i-1])
-                                               * activation_function_derivative(layers[self.number_of_layers-i-1]);
-//              println('Deltas: ', deltas);
-
-              for var i := 0 to self.number_of_layers-2 do
-                self.neural_network[i].adjust_weights(deltas[self.number_of_layers-2-i]);
-            end;
-          if epoch mod 10 = 0 then
-            begin
-            println('Error: ', error / input_data.count);
-            error := 0.0;
-            end;
-          end;
-      end;
-            
       function activation_function(input: Vector): Vector;
       begin
         result := new Vector;
@@ -196,6 +218,15 @@ type
             result[index] := 1
           else
             result[index] := 0;
+      end;
+      
+      function dropout_mask(size: integer): Vector;
+      begin
+        result := new Vector;
+        result.set_size(size);
+        {$omp parallel for}
+        for var index := 0 to size-1 do
+          result[index] := random(2);
       end;
   end;
 end.
