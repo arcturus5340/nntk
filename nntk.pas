@@ -118,13 +118,13 @@ type
         error: real;
       begin
         deltas := new Vector[self.number_of_layers-1];
-//        println(neural_network);
+        layers := new Vector[self.number_of_layers]; 
+        mask := new Vector[self.number_of_layers-1];
+
         for var epoch := 1 to number_of_epoch do
-        begin  
+        begin 
           for var index := 0 to input_data.count-1 do
             begin
-              layers := new Vector[self.number_of_layers]; 
-              mask := new Vector[self.number_of_layers-1];
               layers[0] := input_data[index];
               for var i := 0 to self.number_of_layers-2 do
                 begin
@@ -140,10 +140,9 @@ type
               deltas[0] := output_data[index]-layers.last();
               for var i := 1 to self.number_of_layers-2 do
                 deltas[i] := self.neural_network[self.number_of_layers-i-1].backprop(deltas[i-1])
-                                               * activation_function_derivative(layers[self.number_of_layers-i-1])
-                                               * mask[self.number_of_layers-i-2];
+                           * activation_function_derivative(layers[self.number_of_layers-i-1])
+                           * mask[self.number_of_layers-i-2];
 //              println('Deltas: ', deltas);
-
               for var i := 0 to self.number_of_layers-2 do
                 self.neural_network[i].adjust_weights(deltas[self.number_of_layers-2-i]);
             end;
@@ -224,9 +223,10 @@ type
       begin
         result := new Vector;
         result.set_size(size);
-        {$omp parallel for}
-        for var index := 0 to size-1 do
-          result[index] := random(2);
+        while result.count(1) <> (size div 2) do
+          {$omp parallel for}
+          for var index := 0 to size-1 do
+            result[index] := random(2);
       end;
   end;
 end.
