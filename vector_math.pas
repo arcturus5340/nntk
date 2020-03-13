@@ -5,7 +5,7 @@ type
     private
       coordinates: array of single; 
       
-      static function __add(self_vector, other_vector: Vector): Vector;
+      static function __add(const self_vector, other_vector: Vector): Vector;
       var 
         tmp_result: array of single;
       begin
@@ -17,7 +17,7 @@ type
         result := new Vector(tmp_result);
       end;
       
-      static function __sub(self_vector, other_vector: Vector): Vector;
+      static function __sub(const self_vector, other_vector: Vector): Vector;
       var 
         tmp_result: array of single;
       begin
@@ -29,7 +29,7 @@ type
         result := new Vector(tmp_result);
       end;
       
-      static function __mul(self_vector, other_vector: Vector): Vector;
+      static function __mul(const self_vector, other_vector: Vector): Vector;
       var
         tmp_result: array of single;
       begin
@@ -51,7 +51,7 @@ type
         result := new Vector(tmp_result);
       end;
       
-      static function __pow(self_vector: Vector; exponent: byte): Vector;
+      static function __pow(const self_vector: Vector; exponent: byte): Vector;
       var 
         tmp_result: array of single;
       begin
@@ -72,12 +72,12 @@ type
       begin
         self.coordinates := list_of_values;
       end;
-      constructor Create(list_of_values: List<single>);
+      constructor Create(const list_of_values: List<single>);
       begin
         self.coordinates := list_of_values.ToArray;
       end;
       
-      function dot(other_vector: Vector): single;
+      function dot(const other_vector: Vector): single;
       begin
         {$omp parallel for reduction(+:result)}
         for var index := 0 to self.coordinates.Length-1 do
@@ -95,27 +95,27 @@ type
           result += self.coordinates[index];
       end;
       
-      static function operator+(self_vector, other_vector: Vector): Vector;
+      static function operator+(const self_vector, other_vector: Vector): Vector;
       begin
         result := __add(self_vector, other_vector);
       end;  
      
-      static function operator-(self_vector, other_vector: Vector): Vector;
+      static function operator-(const self_vector, other_vector: Vector): Vector;
       begin
         result := __sub(self_vector, other_vector);
       end;
       
-      static function operator*(self_vector, other_vector: Vector): Vector;
+      static function operator*(const self_vector, other_vector: Vector): Vector;
       begin
         result := __mul(self_vector, other_vector);
       end;      
       
-      static function operator*(self_vector: Vector; other_operand: single): Vector;
+      static function operator*(const self_vector: Vector; other_operand: single): Vector;
       begin
         result := __mul(self_vector, new Vector(other_operand));
       end;
 
-      static function operator**(self_vector: Vector; exponent: integer): Vector;
+      static function operator**(const self_vector: Vector; exponent: integer): Vector;
       begin
         result := __pow(self_vector, exponent);
       end;
@@ -125,17 +125,17 @@ type
         result := self.coordinates[self.coordinates.Length-1];
       end;
       
-      function count(x: single): integer;
+      function count(const x: single): integer;
       begin
         result := self.coordinates.Count(val -> val=x);
       end;
       
-      procedure push_back(x: single);
+      procedure push_back(const x: single);
       begin
         self.coordinates := self.coordinates.Append(x).ToArray();  
       end;
       
-      procedure set_size(x: integer);
+      procedure set_size(const x: integer);
       begin
         SetLength(self.coordinates, x);
         self.coordinates.Initialize();
