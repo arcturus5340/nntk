@@ -36,9 +36,14 @@ type
         tmp_result := new real[self_vector.size()];
         tmp_result.Initialize();
         if other_vector.size() = 1 then
-          {$omp parallel for}
-          for var index := 0 to self_vector.size-1 do
-            tmp_result[index] := self_vector[index] * other_vector[0]
+          begin
+          if other_vector[0] = 0.0 then
+            result := new Vector(tmp_result)
+          else
+            {$omp parallel for}
+            for var index := 0 to self_vector.size-1 do
+              tmp_result[index] := self_vector[index] * other_vector[0]
+          end
         else
           {$omp parallel for}
           for var index := 0 to self_vector.size-1 do
@@ -94,7 +99,7 @@ type
       begin
         result := __add(self_vector, other_vector);
       end;  
-      
+     
       static function operator-(self_vector, other_vector: Vector): Vector;
       begin
         result := __sub(self_vector, other_vector);
@@ -118,6 +123,11 @@ type
       function back(): real;
       begin
         result := self.coordinates[self.coordinates.Length-1];
+      end;
+      
+      function count(x: real): integer;
+      begin
+        result := self.coordinates.Count(val -> val=x);
       end;
       
       procedure push_back(x: real);
