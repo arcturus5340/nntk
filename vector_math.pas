@@ -3,13 +3,13 @@
 type 
   Vector = class
     private
-      coordinates: array of real; 
+      coordinates: array of single; 
       
       static function __add(self_vector, other_vector: Vector): Vector;
       var 
-        tmp_result: array of real;
+        tmp_result: array of single;
       begin
-        tmp_result := new real[self_vector.size()];
+        tmp_result := new single[self_vector.size()];
         tmp_result.Initialize();
         {$omp parallel for}
         for var index := 0 to self_vector.size-1 do
@@ -19,9 +19,9 @@ type
       
       static function __sub(self_vector, other_vector: Vector): Vector;
       var 
-        tmp_result: array of real;
+        tmp_result: array of single;
       begin
-        tmp_result := new real[self_vector.size()];
+        tmp_result := new single[self_vector.size()];
         tmp_result.Initialize();
         {$omp parallel for}
         for var index := 0 to self_vector.size-1 do
@@ -31,9 +31,9 @@ type
       
       static function __mul(self_vector, other_vector: Vector): Vector;
       var
-        tmp_result: array of real;
+        tmp_result: array of single;
       begin
-        tmp_result := new real[self_vector.size()];
+        tmp_result := new single[self_vector.size()];
         tmp_result.Initialize();
         if other_vector.size() = 1 then
           begin
@@ -51,11 +51,11 @@ type
         result := new Vector(tmp_result);
       end;
       
-      static function __pow(self_vector: Vector; exponent: real): Vector;
+      static function __pow(self_vector: Vector; exponent: byte): Vector;
       var 
-        tmp_result: array of real;
+        tmp_result: array of single;
       begin
-        tmp_result := new real[self_vector.size()];
+        tmp_result := new single[self_vector.size()];
         tmp_result.Initialize();
         {$omp parallel for}
         for var index := 0 to self_vector.size-1 do
@@ -64,20 +64,20 @@ type
       end;
     
     public
-      property Element[index: integer]: real read self.coordinates[index] 
-                                             write self.coordinates[index] := value;
-                                             default;
+      property Element[index: integer]: single read self.coordinates[index] 
+                                               write self.coordinates[index] := value;
+                                               default;
                                           
-      constructor Create(params list_of_values: array of real);
+      constructor Create(params list_of_values: array of single);
       begin
         self.coordinates := list_of_values;
       end;
-      constructor Create(list_of_values: List<real>);
+      constructor Create(list_of_values: List<single>);
       begin
         self.coordinates := list_of_values.ToArray;
       end;
       
-      function dot(other_vector: Vector): real;
+      function dot(other_vector: Vector): single;
       begin
         {$omp parallel for reduction(+:result)}
         for var index := 0 to self.coordinates.Length-1 do
@@ -88,7 +88,7 @@ type
           end;
       end;
       
-      function sum(): real;
+      function sum(): single;
       begin
         {$omp parallel for reduction(+:result)}
         for var index := 0 to self.coordinates.Length-1 do
@@ -110,27 +110,27 @@ type
         result := __mul(self_vector, other_vector);
       end;      
       
-      static function operator*(self_vector: Vector; other_operand: real): Vector;
+      static function operator*(self_vector: Vector; other_operand: single): Vector;
       begin
         result := __mul(self_vector, new Vector(other_operand));
       end;
 
-      static function operator**(self_vector: Vector; exponent: real): Vector;
+      static function operator**(self_vector: Vector; exponent: integer): Vector;
       begin
         result := __pow(self_vector, exponent);
       end;
          
-      function back(): real;
+      function back(): single;
       begin
         result := self.coordinates[self.coordinates.Length-1];
       end;
       
-      function count(x: real): integer;
+      function count(x: single): integer;
       begin
         result := self.coordinates.Count(val -> val=x);
       end;
       
-      procedure push_back(x: real);
+      procedure push_back(x: single);
       begin
         self.coordinates := self.coordinates.Append(x).ToArray();  
       end;

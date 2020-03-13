@@ -6,13 +6,13 @@ type
     private
       weights: Vector; 
       input: Vector;
-      alpha: real = 0.01;
+      alpha: single = 0.01;
       
       function initialize_weights(number_of_weights: integer): Vector;
       var
-        tmp_result: array of real;
+        tmp_result: array of single;
       begin
-        tmp_result := new real[number_of_weights];
+        tmp_result := new single[number_of_weights];
         {$omp parallel for}
         for var index := 0 to number_of_weights-1 do
           // Random weight [0, 1)
@@ -20,11 +20,9 @@ type
         result := new Vector(tmp_result);
       end;
 
-      procedure adjust_weights(delta:real);
+      procedure adjust_weights(delta: single);
       begin
-        var new_delta := self.input * delta;
-        new_delta := new_delta * alpha;
-        self.weights := self.weights + new_delta;
+        self.weights := self.weights + self.input * delta * alpha;
       end;
       
     public
@@ -33,13 +31,13 @@ type
         self.weights := initialize_weights(number_of_inputs);
       end;
       
-      function calculate(input: Vector): real;
+      function calculate(input: Vector): single;
       begin
         self.input := input;
         result := self.weights.dot(self.input);
       end;
 
-      function backprop(input: real): Vector;
+      function backprop(input: single): Vector;
       begin
         result := self.weights * input;
       end;
@@ -71,9 +69,7 @@ type
         result.set_size(self.layer.Length);
         {$omp parallel for}
         for var index := 0 to self.layer.length-1 do
-        begin
           result[index] := self.layer[index].calculate(input); 
-        end;
       end;
       
       function backprop(input: Vector): Vector;
@@ -81,9 +77,7 @@ type
         result := self.layer[0].backprop(input[0]);
         {$omp parallel for reduction(+:result)}
         for var index := 1 to self.layer.Length-1 do
-        begin
           result := result + self.layer[index].backprop(input[index]);
-        end;
       end;
       
       procedure adjust_weights(delta: Vector);
@@ -115,7 +109,7 @@ type
         deltas: array of Vector;
         layers: array of Vector;
         mask: array of Vector;
-        error: real;
+        error: single;
       begin
         deltas := new Vector[self.number_of_layers-1];
         layers := new Vector[self.number_of_layers]; 
@@ -126,23 +120,25 @@ type
           for var index := 0 to input_data.count-1 do
             begin
               layers[0] := input_data[index];
+              {$omp parallel for}
               for var i := 0 to self.number_of_layers-2 do
                 begin
                 layers[i+1] := activation_function(self.neural_network[i].calculate(layers[i]));
                 mask[i] := dropout_mask(layers[i+1].size());
-                layers[i+1] := layers[i+1] * mask[i];
-                layers[i+1] := layers[i+1] * 2;
+                layers[i+1] := layers[i+1] * mask[i] * 2;
                 end;
               
               if epoch mod 10 = 0 then
                 error += ((output_data[index]-layers.last()) ** 2).sum();
-              
+                      
               deltas[0] := output_data[index]-layers.last();
+              {$omp parallel for}
               for var i := 1 to self.number_of_layers-2 do
                 deltas[i] := self.neural_network[self.number_of_layers-i-1].backprop(deltas[i-1])
                            * activation_function_derivative(layers[self.number_of_layers-i-1])
                            * mask[self.number_of_layers-i-2];
 //              println('Deltas: ', deltas);
+              {$omp parallel for}
               for var i := 0 to self.number_of_layers-2 do
                 self.neural_network[i].adjust_weights(deltas[self.number_of_layers-2-i]);
             end;
