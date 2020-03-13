@@ -1,12 +1,13 @@
 ﻿unit nntk;
 uses vector_math;
 
+var global_alpha: single := 0.01;
+
 type 
   Neuron = class
     private
       weights: Vector; 
       input: Vector;
-      alpha: single = 0.01;
       
       function initialize_weights(const number_of_weights: integer): Vector;
       var
@@ -22,7 +23,7 @@ type
 
       procedure adjust_weights(const delta: single);
       begin
-        self.weights := self.weights + self.input * delta * alpha;
+        self.weights := self.weights + self.input * delta * global_alpha;
       end;
       
     public
@@ -46,9 +47,8 @@ type
       begin
         result := 'Нейрон (Веса): ' + self.weights.ToString;
       end;
-  end;
+    end;
 
-type 
   Layer = class
     private
       layer: array of Neuron;
@@ -93,9 +93,8 @@ type
           result += layer[index].ToString + ' | ';
         result += layer[layer.Length-1].ToString;
       end;
-  end;
-
-type
+    end;
+ 
   Neural_Network = class
     private
       neural_network: array of Layer;
@@ -103,13 +102,15 @@ type
       
       procedure __train(const input_data: List<Vector>; 
                         const output_data: List<Vector>;
-                        const number_of_epoch: integer);
+                        const number_of_epoch: integer;
+                        const alpha: single);
       var
         deltas: array of Vector;
         layers: array of Vector;
         mask: array of Vector;
         error: single;
       begin
+        global_alpha := alpha;
         deltas := new Vector[self.number_of_layers-1];
         layers := new Vector[self.number_of_layers]; 
         mask := new Vector[self.number_of_layers-1];
@@ -162,17 +163,19 @@ type
       
       procedure train(const input_data: List<Vector>; 
                       const output_data: List<Vector>;
-                      const number_of_epoch: integer);
+                      const number_of_epoch: integer;
+                      alpha: single := 0.01);
       begin
-        __train(input_data, output_data, number_of_epoch);  
+        __train(input_data, output_data, number_of_epoch, alpha);  
       end;
       procedure train(const input_data: array of Vector; 
                       const output_data: array of Vector;
-                      const number_of_epoch: integer);
+                      const number_of_epoch: integer;
+                      alpha: single := 0.01);
       begin
         __train(new List<Vector>(input_data), 
                 new List<Vector>(output_data), 
-                number_of_epoch);
+                number_of_epoch, alpha);
       end;
 
       function run(const input_data: Vector): Vector;
@@ -224,4 +227,5 @@ type
             result[index] := random(2);
       end;
   end;
+  
 end.
