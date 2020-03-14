@@ -64,7 +64,7 @@ type
       end;
     
     public
-      property Element[index: integer]: single read self.coordinates[index] 
+      property Element[index: uint64]: single read self.coordinates[index] 
                                                write self.coordinates[index] := value;
                                                default;
                                           
@@ -123,7 +123,7 @@ type
         result := __mul(self_vector, new Vector(other_operand));
       end;
 
-      static function operator**(const self_vector: Vector; exponent: integer): Vector;
+      static function operator**(const self_vector: Vector; exponent: byte): Vector;
       begin
         result := __pow(self_vector, exponent);
       end;
@@ -133,7 +133,7 @@ type
         result := self.coordinates[self.coordinates.Length-1];
       end;
       
-      function count(const x: single): integer;
+      function count(const x: single): uint64;
       begin
         result := self.coordinates.Count(val -> val=x);
       end;
@@ -143,13 +143,13 @@ type
         self.coordinates := self.coordinates.Append(x).ToArray();  
       end;
       
-      procedure set_size(const x: integer);
+      procedure set_size(const x: uint64);
       begin
         SetLength(self.coordinates, x);
         self.coordinates.Initialize();
       end;
       
-      function size(): integer;
+      function size(): uint64;
       begin
         result := self.coordinates.Length;
       end;

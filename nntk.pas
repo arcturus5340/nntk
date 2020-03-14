@@ -1,7 +1,8 @@
 ﻿unit nntk;
-uses vector_math;
+uses __nntk_functions, vector_math;
 
-var global_alpha: single := 0.01;
+var 
+  global_alpha: single := 0.01;
 
 type 
   Neuron = class
@@ -103,18 +104,19 @@ type
       neural_network: array of Layer;
       input_size: uint64;
       number_of_layers: uint64;
+      activation_function: function(const input: Vector): Vector;
+      activation_function_derivative: function(const input: Vector): Vector;
+
       
       procedure __train(const input_data: List<Vector>; 
                         const output_data: List<Vector>;
-                        const number_of_epoch: uint64;
-                        const alpha: single);
+                        const number_of_epoch: uint64);
       var
         deltas: array of Vector;
         layers: array of Vector;
         mask: array of Vector;
         error: single;
       begin
-        global_alpha := alpha;
         deltas := new Vector[self.number_of_layers-1];
         layers := new Vector[self.number_of_layers]; 
 //        mask := new Vector[self.number_of_layers-1];
@@ -169,11 +171,17 @@ type
       procedure train(const input_data: List<Vector>; 
                       const output_data: List<Vector>;
                       const number_of_epoch: uint64;
-                      alpha: single := 0.01);
+                      alpha: single := 0.01;
+                      activation_function: function(const input: Vector): Vector := __nntk_functions.relu;
+                      activation_function_derivative: function(const input: Vector): Vector := __nntk_functions.relu_derivative);
       begin
         if input_data.Count <> output_data.Count then
           raise new System.ArgumentException('Размеры обучающей выборки для входных и выходных данных должны совпадать');
-        __train(input_data, output_data, number_of_epoch, alpha);  
+        global_alpha := alpha;
+        self.activation_function := activation_function;
+        self.activation_function_derivative := activation_function_derivative;
+
+        __train(input_data, output_data, number_of_epoch);  
       end;
       procedure train(const input_data: array of Vector; 
                       const output_data: array of Vector;
@@ -182,9 +190,13 @@ type
       begin
         if input_data.Length <> output_data.Length then
           raise new System.ArgumentException('Размеры обучающей выборки для входных и выходных данных должны совпадать');
-        __train(new List<Vector>(input_data), 
+        global_alpha := alpha;
+        self.activation_function := activation_function;
+        self.activation_function_derivative := activation_function_derivative;
+        
+        __train(new List<Vector>(input_data),
                 new List<Vector>(output_data), 
-                number_of_epoch, alpha);
+                number_of_epoch);
       end;
 
       function run(const input_data: Vector): Vector;
@@ -203,30 +215,6 @@ type
         result := self.run;
       end;
       
-      function activation_function(const input: Vector): Vector;
-      begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          if input[index] > 0 then
-            result[index] := input[index]
-          else
-            result[index] := 0;
-      end; 
-
-      function activation_function_derivative(const input: Vector): Vector;
-      begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          if input[index] > 0 then
-            result[index] := 1
-          else
-            result[index] := 0;
-      end;
-      
       function dropout_mask(const size: uint64): Vector;
       begin
         result := new Vector;
@@ -237,5 +225,4 @@ type
             result[index] := random(2);
       end;
   end;
-  
 end.
