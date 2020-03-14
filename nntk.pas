@@ -1,10 +1,111 @@
 ﻿unit nntk;
-uses __nntk_functions, vector_math;
+uses vector_math;
 
 var 
   global_alpha: single := 0.01;
 
-type 
+type   
+  Functions = class
+    public
+      static function relu(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          if input[index] > 0 then
+            result[index] := input[index]
+          else
+            result[index] := 0;
+      end;
+      
+      static function relu_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          if input[index] > 0 then
+            result[index] := 1
+          else
+            result[index] := 0;
+      end;
+    
+      static function identity(const input: Vector): Vector;
+      begin
+        result := input
+      end;
+      
+      static function identity_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := 1
+      end;
+        
+      static function binary_step(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          if input[index] > 0 then
+            result[index] := 1
+          else
+            result[index] := 0;
+      end;
+      
+      static function binary_step_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          if input[index] <> 0 then
+            result[index] := 0
+          else
+            result[index] := System.Double.NaN;
+      end;
+      
+      static function sigmoid(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := 1/(1+exp(-input[index]))
+      end;
+      
+      static function sigmoid_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := 1/(1+exp(-input[index]))*(1-1/(1+exp(-input[index])));
+      end;
+    
+      static function tanh(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := System.Math.Tanh(input[index]);
+      end;
+      
+      static function tanh_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := 1-System.Math.Tanh(input[index]);
+      end;
+  end;
+
   Neuron = class
     private
       weights: Vector; 
@@ -172,8 +273,8 @@ type
                       const output_data: List<Vector>;
                       const number_of_epoch: uint64;
                       alpha: single := 0.01;
-                      activation_function: function(const input: Vector): Vector := __nntk_functions.relu;
-                      activation_function_derivative: function(const input: Vector): Vector := __nntk_functions.relu_derivative);
+                      activation_function: function(const input: Vector): Vector := Functions.relu;
+                      activation_function_derivative: function(const input: Vector): Vector := Functions.relu_derivative);
       begin
         if input_data.Count <> output_data.Count then
           raise new System.ArgumentException('Размеры обучающей выборки для входных и выходных данных должны совпадать');

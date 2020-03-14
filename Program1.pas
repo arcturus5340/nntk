@@ -22,7 +22,7 @@ begin
 //    opt.Add(x);
 //  end; 
 //  
-  var ipt := new List<Vector>;
+  var ipt := new List<vector_math.Vector>;
   ipt.add(new Vector(0, 0));
   ipt.Add(new Vector(0, 1));
   ipt.Add(new Vector(1, 0));
@@ -37,7 +37,7 @@ begin
   var nn := new Neural_Network(size);
   writeln(Milliseconds-d);
   var e := Milliseconds;
-  nn.train(ipt, opt, EPOCHS_COUNT, LEARNING_RATE);
+  nn.train(ipt, opt, EPOCHS_COUNT, LEARNING_RATE, nntk.Functions.tanh, nntk.Functions.tanh_derivative);
   writeln(Milliseconds-e);
   
   print(nn.run(new Vector(1, 1)));  
