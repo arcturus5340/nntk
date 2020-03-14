@@ -79,6 +79,8 @@ type
       
       function dot(const other_vector: Vector): single;
       begin
+        if self.coordinates.Length <> other_vector.size then
+          raise new System.ArithmeticException('Размеры векторов не совпадают');
         {$omp parallel for reduction(+:result)}
         for var index := 0 to self.coordinates.Length-1 do
           begin
@@ -97,16 +99,22 @@ type
       
       static function operator+(const self_vector, other_vector: Vector): Vector;
       begin
+        if self_vector.size <> other_vector.size then
+          raise new System.ArithmeticException('Размеры векторов не совпадают');
         result := __add(self_vector, other_vector);
       end;  
      
       static function operator-(const self_vector, other_vector: Vector): Vector;
       begin
+        if self_vector.size <> other_vector.size then
+          raise new System.ArithmeticException('Размеры векторов не совпадают');
         result := __sub(self_vector, other_vector);
       end;
       
       static function operator*(const self_vector, other_vector: Vector): Vector;
       begin
+        if self_vector.size <> other_vector.size then
+          raise new System.ArithmeticException('Размеры векторов не совпадают');
         result := __mul(self_vector, other_vector);
       end;      
       
