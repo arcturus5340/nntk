@@ -104,6 +104,202 @@ type
         for var index := 0 to input.size-1 do
           result[index] := 1-System.Math.Tanh(input[index]);
       end;
+      
+      static function arctan(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := System.Math.Atan(input[index]);
+      end;
+      
+      static function arctan_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := 1/(input[index]**2 + 1);
+      end;
+      
+      static function arcsinh(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := ln(input[index] + sqrt(input[index]**2 + 1));
+      end;
+      
+      static function arcsinh_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := 1/sqrt(input[index]**2 + 1);
+      end;
+            
+      static function softsign(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := input[index]/(1+abs(input[index]));
+      end;
+      
+      static function softsign_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := 1/(1+abs(input[index]))**2;
+      end;
+            
+      static function brelu(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          if index mod 2 = 0 then
+            result[index] := input[index]>0? input[index]: 0
+          else
+            result[index] := -(-input[index]>0? input[index]: 0);
+      end;
+      
+      static function brelu_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          if index mod 2 = 0 then
+            result[index] := input[index]>0? 1: 0
+          else
+            result[index] := -input[index]>0? 1: 0;
+      end;
+      
+      static function softplus(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := ln(1+exp(input[index]));
+      end;
+      
+      static function softplus_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := 1/(1+exp(-input[index]));
+      end;
+            
+      static function bent_identity(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := (sqr(input[index]**2+1)-1)/2 + input[index];
+      end;
+      
+      static function bent_identity_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := input[index]/(2*sqr(input[index]**2+1))+1;
+      end;
+      
+      static function sinusoid(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := sin(input[index]);
+      end;
+      
+      static function sinusoid_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := cos(input[index]);
+      end;
+      
+      static function sinc(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := input[index]=0? 1: sin(input[index])/input[index];
+      end;
+      
+      static function sinc_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := input[index]=0? 0: cos(input[index])/input[index] - sin(input[index])/input[index]**2;
+      end;
+            
+      static function gaussian(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := exp(-(input[index]**2));
+      end;
+      
+      static function gaussian_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := -2*input[index]*exp(-(input[index]**2));
+      end;
+                  
+      static function sqrbf(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          if abs(input[index]) < 1 then
+            result[index] := 1 - input[index]**2/2
+          else if abs(input[index]) > 2 then
+            result[index] := 0
+          else
+            result[index] := (2-abs(input[index]))**2/2;
+      end;
+      
+      static function sqrbf_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          if abs(input[index]) < 1 then
+            result[index] := -input[index]
+          else if abs(input[index]) > 2 then
+            result[index] := 0
+          else
+            result[index] := input[index] - 2*sign(input[index]);
+      end;
   end;
 
   Neuron = class
