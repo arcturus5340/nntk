@@ -9,7 +9,7 @@ type
       weights: Vector; 
       input: Vector;
       
-      function initialize_weights(const number_of_weights: integer): Vector;
+      function initialize_weights(const number_of_weights: uint64): Vector;
       var
         tmp_result: array of single;
       begin
@@ -20,14 +20,9 @@ type
           tmp_result[index] := random*2-1;
         result := new Vector(tmp_result);
       end;
-
-      procedure adjust_weights(const delta: single);
-      begin
-        self.weights := self.weights + self.input * delta * global_alpha;
-      end;
       
     public
-      constructor Create(const number_of_inputs: integer);
+      constructor Create(const number_of_inputs: uint64);
       begin
         self.weights := initialize_weights(number_of_inputs);
       end;
@@ -43,6 +38,11 @@ type
         result := self.weights * input;
       end;
       
+      procedure adjust_weights(const delta: single);
+      begin
+        self.weights := self.weights + self.input * delta * global_alpha;
+      end;
+      
       function ToString: string; override;
       begin
         result := 'Нейрон (Веса): ' + self.weights.ToString;
@@ -54,8 +54,11 @@ type
       layer: array of Neuron;
       
     public
-      constructor Create(const number_of_neurons, number_of_weights: integer);
+      constructor Create(const number_of_neurons, number_of_weights: uint64);
       begin
+        if number_of_neurons < 1 then
+          raise new System.ArgumentException('Размеры любого слоя ИНС должны быть больше 0');
+
         self.layer := new Neuron[number_of_neurons];
         {$omp parallel for}
         for var index := 0 to number_of_neurons-1 do
@@ -98,11 +101,12 @@ type
   Neural_Network = class
     private
       neural_network: array of Layer;
-      number_of_layers: integer;
+      input_size: uint64;
+      number_of_layers: uint64;
       
       procedure __train(const input_data: List<Vector>; 
                         const output_data: List<Vector>;
-                        const number_of_epoch: integer;
+                        const number_of_epoch: uint64;
                         const alpha: single);
       var
         deltas: array of Vector;
@@ -113,30 +117,28 @@ type
         global_alpha := alpha;
         deltas := new Vector[self.number_of_layers-1];
         layers := new Vector[self.number_of_layers]; 
-        mask := new Vector[self.number_of_layers-1];
+//        mask := new Vector[self.number_of_layers-1];
 
         for var epoch := 1 to number_of_epoch do
         begin 
           for var index := 0 to input_data.count-1 do
             begin
               layers[0] := input_data[index];
-              {$omp parallel for}
               for var i := 0 to self.number_of_layers-2 do
                 begin
                 layers[i+1] := activation_function(self.neural_network[i].calculate(layers[i]));
-                mask[i] := dropout_mask(layers[i+1].size());
-                layers[i+1] := layers[i+1] * mask[i] * 2;
+//                mask[i] := dropout_mask(layers[i+1].size());
+                layers[i+1] := layers[i+1]; // * mask[i] * 2;
                 end;
               
               if epoch mod 10 = 0 then
                 error += ((output_data[index]-layers.last()) ** 2).sum();
                       
               deltas[0] := output_data[index]-layers.last();
-              {$omp parallel for}
               for var i := 1 to self.number_of_layers-2 do
                 deltas[i] := self.neural_network[self.number_of_layers-i-1].backprop(deltas[i-1])
-                           * activation_function_derivative(layers[self.number_of_layers-i-1])
-                           * mask[self.number_of_layers-i-2];
+                           * activation_function_derivative(layers[self.number_of_layers-i-1]);
+//                           * mask[self.number_of_layers-i-2];
 //              println('Deltas: ', deltas);
               {$omp parallel for}
               for var i := 0 to self.number_of_layers-2 do
@@ -154,25 +156,32 @@ type
       constructor Create(const neural_network_topology: Vector);
       begin
         self.number_of_layers := neural_network_topology.size();
-        self.neural_network := new Layer[number_of_layers-1];
+        self.input_size := trunc(neural_network_topology[0]);
+        if self.number_of_layers < 2 then
+          raise new System.ArgumentException('Кол-во слоев ИНС должно быть больше 1');
+        self.neural_network := new Layer[self.number_of_layers-1];
         {$omp parallel for}
-        for var index := 1 to number_of_layers-1 do
+        for var index := 1 to self.number_of_layers-1 do
           self.neural_network[index-1] := new Layer(trunc(neural_network_topology[index]), 
                                                     trunc(neural_network_topology[index-1]));
       end;
       
       procedure train(const input_data: List<Vector>; 
                       const output_data: List<Vector>;
-                      const number_of_epoch: integer;
+                      const number_of_epoch: uint64;
                       alpha: single := 0.01);
       begin
+        if input_data.Count <> output_data.Count then
+          raise new System.ArgumentException('Размеры обучающей выборки для входных и выходных данных должны совпадать');
         __train(input_data, output_data, number_of_epoch, alpha);  
       end;
       procedure train(const input_data: array of Vector; 
                       const output_data: array of Vector;
-                      const number_of_epoch: integer;
+                      const number_of_epoch: uint64;
                       alpha: single := 0.01);
       begin
+        if input_data.Length <> output_data.Length then
+          raise new System.ArgumentException('Размеры обучающей выборки для входных и выходных данных должны совпадать');
         __train(new List<Vector>(input_data), 
                 new List<Vector>(output_data), 
                 number_of_epoch, alpha);
@@ -180,9 +189,10 @@ type
 
       function run(const input_data: Vector): Vector;
       begin
+      if input_data.size() <> self.input_size then
+          raise new System.ArgumentException('Размеры первого слоя ИНС и входных данных должны совпадать');  
       var layers := new Vector[self.number_of_layers];
-      layers[0] :=input_data;
-      {$omp parallel for}
+      layers[0] := input_data;
       for var i := 0 to self.number_of_layers-2 do
         layers[i+1] := activation_function(self.neural_network[i].calculate(layers[i]));
       result := layers[self.number_of_layers-1];
@@ -217,7 +227,7 @@ type
             result[index] := 0;
       end;
       
-      function dropout_mask(const size: integer): Vector;
+      function dropout_mask(const size: uint64): Vector;
       begin
         result := new Vector;
         result.set_size(size);
