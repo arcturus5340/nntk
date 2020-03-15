@@ -1,4 +1,5 @@
-﻿unit nntk;
+﻿/// Модуль для создания и обучений ИНС
+unit nntk;
 uses vector_math;
 
 var 
@@ -8,6 +9,7 @@ var
 type   
   Functions = class
     public
+      /// Возвращает вектор, к каждому члену которого применена функция активации Линейный выпрямитель
       static function relu(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -20,6 +22,7 @@ type
             result[index] := 0;
       end;
       
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Линейный выпрямитель
       static function relu_derivative(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -32,11 +35,13 @@ type
             result[index] := 0;
       end;
     
+      /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
       static function identity(const input: Vector): Vector;
       begin
         result := input
       end;
       
+      /// Возвращает вектор, к каждому члену которого применена производная Тождественной функции активации
       static function identity_derivative(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -46,6 +51,7 @@ type
           result[index] := 1
       end;
         
+      /// Возвращает вектор, к каждому члену которого применена функция активации Хевисайда
       static function binary_step(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -58,6 +64,7 @@ type
             result[index] := 0;
       end;
       
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Хевисайда
       static function binary_step_derivative(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -70,6 +77,7 @@ type
             result[index] := System.Double.NaN;
       end;
       
+      /// Возвращает вектор, к каждому члену которого применена функция активации Сигмоида
       static function sigmoid(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -79,6 +87,7 @@ type
           result[index] := 1/(1+exp(-input[index]))
       end;
       
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Сигмоида
       static function sigmoid_derivative(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -88,6 +97,7 @@ type
           result[index] := 1/(1+exp(-input[index]))*(1-1/(1+exp(-input[index])));
       end;
     
+      /// Возвращает вектор, к каждому члену которого применена функции активации Гиперболический тангенс
       static function tanh(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -97,6 +107,7 @@ type
           result[index] := System.Math.Tanh(input[index]);
       end;
       
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Гиперболический тангенс
       static function tanh_derivative(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -106,6 +117,7 @@ type
           result[index] := 1-System.Math.Tanh(input[index]);
       end;
       
+      /// Возвращает вектор, к каждому члену которого применена функции активации Арктангенс
       static function arctan(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -115,6 +127,7 @@ type
           result[index] := System.Math.Atan(input[index]);
       end;
       
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Арктангенс
       static function arctan_derivative(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -124,7 +137,8 @@ type
           result[index] := 1/(input[index]**2 + 1);
       end;
       
-      static function arcsinh(const input: Vector): Vector;
+      /// Возвращает вектор, к каждому члену которого применена функция активации Ареасинус
+      static function arsinh(const input: Vector): Vector;
       begin
         result := new Vector;
         result.set_size(input.size);
@@ -133,7 +147,8 @@ type
           result[index] := ln(input[index] + sqrt(input[index]**2 + 1));
       end;
       
-      static function arcsinh_derivative(const input: Vector): Vector;
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Ареасинус
+      static function arsinh_derivative(const input: Vector): Vector;
       begin
         result := new Vector;
         result.set_size(input.size);
@@ -142,6 +157,7 @@ type
           result[index] := 1/sqrt(input[index]**2 + 1);
       end;
             
+      /// Возвращает вектор, к каждому члену которого применена функция активации Softsign
       static function softsign(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -151,6 +167,7 @@ type
           result[index] := input[index]/(1+abs(input[index]));
       end;
       
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Softsign
       static function softsign_derivative(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -160,6 +177,7 @@ type
           result[index] := 1/(1+abs(input[index]))**2;
       end;
             
+      /// Возвращает вектор, к каждому члену которого применена функция активации Биполярный линейный выпрямитель
       static function brelu(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -172,6 +190,7 @@ type
             result[index] := -(-input[index]>0? input[index]: 0);
       end;
       
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Биполярный линейный выпрямитель
       static function brelu_derivative(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -184,6 +203,7 @@ type
             result[index] := -input[index]>0? 1: 0;
       end;
       
+      /// Возвращает вектор, к каждому члену которого применена функция активации Softplus
       static function softplus(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -193,6 +213,7 @@ type
           result[index] := ln(1+exp(input[index]));
       end;
       
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Softplus
       static function softplus_derivative(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -202,6 +223,7 @@ type
           result[index] := 1/(1+exp(-input[index]));
       end;
             
+      /// Возвращает вектор, к каждому члену которого применена Выгнутая тождественная функция активации
       static function bent_identity(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -211,6 +233,7 @@ type
           result[index] := (sqr(input[index]**2+1)-1)/2 + input[index];
       end;
       
+      /// Возвращает вектор, к каждому члену которого применена производная Выгнутой тождественной функции активации
       static function bent_identity_derivative(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -220,6 +243,7 @@ type
           result[index] := input[index]/(2*sqr(input[index]**2+1))+1;
       end;
       
+      /// Возвращает вектор, к каждому члену которого применена функция активации Синусода
       static function sinusoid(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -229,6 +253,7 @@ type
           result[index] := sin(input[index]);
       end;
       
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Синусода
       static function sinusoid_derivative(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -238,6 +263,7 @@ type
           result[index] := cos(input[index]);
       end;
       
+      /// Возвращает вектор, к каждому члену которого применена функция активации Кардинальный синус
       static function sinc(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -247,6 +273,7 @@ type
           result[index] := input[index]=0? 1: sin(input[index])/input[index];
       end;
       
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Кардинальный синус
       static function sinc_derivative(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -256,6 +283,7 @@ type
           result[index] := input[index]=0? 0: cos(input[index])/input[index] - sin(input[index])/input[index]**2;
       end;
             
+      /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
       static function gaussian(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -265,6 +293,7 @@ type
           result[index] := exp(-(input[index]**2));
       end;
       
+      /// Возвращает вектор, к каждому члену которого применена производная Гауссовой функции активации
       static function gaussian_derivative(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -274,6 +303,7 @@ type
           result[index] := -2*input[index]*exp(-(input[index]**2));
       end;
                   
+      /// Возвращает вектор, к каждому члену которого применена Квадратная радиальная базисная функция активации
       static function sqrbf(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -288,6 +318,7 @@ type
             result[index] := (2-abs(input[index]))**2/2;
       end;
       
+      /// Возвращает вектор, к каждому члену которого применена производная Квадратной радиальной базисной функции активации
       static function sqrbf_derivative(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -308,6 +339,7 @@ type
       weights: Vector; 
       input: Vector;
       
+      /// Иницилизирует number_of_weights случайных весов в диапазоне [0, 1)
       function initialize_weights(const number_of_weights: uint64): Vector;
       var
         tmp_result: array of single;
@@ -315,28 +347,31 @@ type
         tmp_result := new single[number_of_weights];
         {$omp parallel for}
         for var index := 0 to number_of_weights-1 do
-          // Random weight [0, 1)
           tmp_result[index] := random*2-1;
         result := new Vector(tmp_result);
       end;
       
     public
+      /// Инициализирует новый экземпляр класса Neuron с number_of_inputs входов
       constructor Create(const number_of_inputs: uint64);
       begin
         self.weights := initialize_weights(number_of_inputs);
       end;
       
+      /// Возвращает ненормализированный выход нейрона
       function calculate(const input: Vector): single;
       begin
         self.input := input;
         result := self.weights.dot(self.input);
       end;
 
+      /// Возвращает вектор ошибок для предшестующих нейронов 
       function backprop(const input: single): Vector;
       begin
         result := self.weights * input;
       end;
       
+      /// Изменяет веса с учетом ошибки delta
       procedure adjust_weights(const delta: single);
       begin
         self.weights := self.weights + self.input * delta * global_alpha;
@@ -353,6 +388,7 @@ type
       layer: array of Neuron;
       
     public
+      /// Инициализирует новый экземпляр класса Layer с number_of_neurons нейронов и number_of_weights входов для каждого
       constructor Create(const number_of_neurons, number_of_weights: uint64);
       begin
         if number_of_neurons < 1 then
@@ -364,6 +400,7 @@ type
           self.layer[index] := new Neuron(number_of_weights);
       end;
       
+      /// Возвращает ненормализированный вектор выходных значений слоя
       function calculate(const input: Vector): Vector;
       begin
         result := new Vector;
@@ -373,6 +410,7 @@ type
           result[index] := self.layer[index].calculate(input); 
       end;
       
+      /// Возвращает вектор ошибок для предшестующих слоев 
       function backprop(const input: Vector): Vector;
       begin
         result := self.layer[0].backprop(input[0]);
@@ -381,6 +419,7 @@ type
           result := result + self.layer[index].backprop(input[index]);
       end;
       
+      /// Изменяет веса нейронов слоя с учетом ошибки delta
       procedure adjust_weights(const delta: Vector);
       begin
         {$omp parallel for}
@@ -405,7 +444,7 @@ type
       activation_function: function(const input: Vector): Vector;
       activation_function_derivative: function(const input: Vector): Vector;
 
-      
+      /// Обучает нейронную сеть на входных данных input_data и выходных данных output_data number_of_epoch эпох 
       procedure __train(const input_data: List<Vector>; 
                         const output_data: List<Vector>;
                         const number_of_epoch: uint64);
@@ -452,6 +491,7 @@ type
       end;
       
     public
+      /// Инициализирует объект класса Neural_Network с заданной топологией
       constructor Create(const neural_network_topology: Vector);
       begin
         self.number_of_layers := neural_network_topology.size();
@@ -464,14 +504,19 @@ type
           self.neural_network[index-1] := new Layer(trunc(neural_network_topology[index]), 
                                                     trunc(neural_network_topology[index-1]));
       end;
-      
+      /// Обучает нейронную сеть на входных данных input_data и выходных данных output_data number_of_epoch эпох
+      /// Необязательные параметры:
+      /// Коэффициент обучаемости alpha (по умолчанию 0.01)
+      /// Функция активации activation_function (по умолчанию nntk.functions.relu) 
+      /// Производная фукции активации activation_function_derivative (по умолчанию nntk.functions.relu_derivative)
+      /// Вероятность прореживания dropout_probability (по умолчанию 0.0 - Прореживание не проводится)
       procedure train(const input_data: List<Vector>; 
                       const output_data: List<Vector>;
                       const number_of_epoch: uint64;
                       alpha: single := 0.01;
                       activation_function: function(const input: Vector): Vector := Functions.relu;
                       activation_function_derivative: function(const input: Vector): Vector := Functions.relu_derivative;
-                      dropout_probability: single := 0);
+                      dropout_probability: single := 0.0);
       begin
         if input_data.Count <> output_data.Count then
           raise new System.ArgumentException('Размеры обучающей выборки для входных и выходных данных должны совпадать');
@@ -482,6 +527,12 @@ type
         self.activation_function := activation_function;
         self.activation_function_derivative := activation_function_derivative;
 
+      /// Обучает нейронную сеть на входных данных input_data и выходных данных output_data number_of_epoch эпох
+      /// Необязательные параметры:
+      /// Коэффициент обучаемости alpha (по умолчанию 0.01)
+      /// Функция активации activation_function (по умолчанию nntk.functions.relu) 
+      /// Производная фукции активации activation_function_derivative (по умолчанию nntk.functions.relu_derivative)
+      /// Вероятность прореживания dropout_probability (по умолчанию 0.0 - Прореживание не проводится)
         __train(input_data, output_data, number_of_epoch);  
       end;
       procedure train(const input_data: array of Vector; 
@@ -490,7 +541,7 @@ type
                       alpha: single := 0.01;
                       activation_function: function(const input: Vector): Vector := Functions.relu;
                       activation_function_derivative: function(const input: Vector): Vector := Functions.relu_derivative;
-                      dropout_probability: single := 0);
+                      dropout_probability: single := 0.0);
       begin
         if input_data.Length <> output_data.Length then
           raise new System.ArgumentException('Размеры обучающей выборки для входных и выходных данных должны совпадать');
@@ -506,6 +557,7 @@ type
                 number_of_epoch);
       end;
 
+      /// Возвращает результат работы нейронной сети для входных данных input_data
       function run(const input_data: Vector): Vector;
       begin
       if input_data.size() <> self.input_size then
@@ -517,11 +569,13 @@ type
       result := layers[self.number_of_layers-1];
       end;
    
+      /// Возвращает модель нейронной сети в виде функции
       function get_model(): function (input_data: Vector): Vector;
       begin
         result := self.run;
       end;
       
+      /// Возвращает модель вектор прореживания
       function get_dropout_mask(const size: uint64): Vector;
       begin
         result := new Vector;
