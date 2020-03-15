@@ -67,16 +67,18 @@ type
       property Element[index: uint64]: single read self.coordinates[index] 
                                                write self.coordinates[index] := value;
                                                default;
-                                          
-      constructor Create(params list_of_values: array of single);
+      /// Инициализирует новый экземпляр класса Vector, содержащий элементы массива array_of_values
+      constructor Create(params array_of_values: array of single);
       begin
-        self.coordinates := list_of_values;
+        self.coordinates := array_of_values;
       end;
+      /// Инициализирует новый экземпляр класса Vector, содержащий элементы листа list_of_values
       constructor Create(const list_of_values: List<single>);
       begin
         self.coordinates := list_of_values.ToArray;
       end;
-      
+
+      /// Возвращает скалярное произведение двух векторов
       function dot(const other_vector: Vector): single;
       begin
         if self.coordinates.Length <> other_vector.size then
@@ -90,6 +92,7 @@ type
           end;
       end;
       
+      /// Возвращает сумму элементов вектора
       function sum(): single;
       begin
         {$omp parallel for reduction(+:result)}
@@ -128,27 +131,32 @@ type
         result := __pow(self_vector, exponent);
       end;
          
+      /// Возвращает последний элемент вектора
       function back(): single;
       begin
         result := self.coordinates[self.coordinates.Length-1];
       end;
       
+      /// Возвращает кол-во элементов x в векторе
       function count(const x: single): uint64;
       begin
         result := self.coordinates.Count(val -> val=x);
       end;
       
+      /// Помещает элемент x в конец вектора
       procedure push_back(const x: single);
       begin
         self.coordinates := self.coordinates.Append(x).ToArray();  
       end;
       
+      /// Устанавливает размерность вектора в x
       procedure set_size(const x: uint64);
       begin
         SetLength(self.coordinates, x);
         self.coordinates.Initialize();
       end;
       
+      /// Возвращает размерность вектора
       function size(): uint64;
       begin
         result := self.coordinates.Length;
@@ -162,5 +170,4 @@ type
         result += ((self.coordinates.Length>0)?self.coordinates[self.coordinates.Length-1].ToString:'') + ')';
       end;
   end;
-
 end.
