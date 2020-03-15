@@ -2,7 +2,8 @@
 uses vector_math;
 
 var 
-  global_alpha: single := 0.01;
+  global_alpha: single;
+  global_dropout_probability: single;
 
 type   
   Functions = class
@@ -416,7 +417,7 @@ type
       begin
         deltas := new Vector[self.number_of_layers-1];
         layers := new Vector[self.number_of_layers]; 
-//        mask := new Vector[self.number_of_layers-1];
+        mask := new Vector[self.number_of_layers-1];
 
         for var epoch := 1 to number_of_epoch do
         begin 
@@ -426,8 +427,8 @@ type
               for var i := 0 to self.number_of_layers-2 do
                 begin
                 layers[i+1] := activation_function(self.neural_network[i].calculate(layers[i]));
-//                mask[i] := dropout_mask(layers[i+1].size());
-                layers[i+1] := layers[i+1]; // * mask[i] * 2;
+                mask[i] := get_dropout_mask(layers[i+1].size());
+                layers[i+1] := layers[i+1] * mask[i] * (1/(1-global_dropout_probability));
                 end;
               
               if epoch mod 10 = 0 then
@@ -436,9 +437,8 @@ type
               deltas[0] := output_data[index]-layers.last();
               for var i := 1 to self.number_of_layers-2 do
                 deltas[i] := self.neural_network[self.number_of_layers-i-1].backprop(deltas[i-1])
-                           * activation_function_derivative(layers[self.number_of_layers-i-1]);
-//                           * mask[self.number_of_layers-i-2];
-//              println('Deltas: ', deltas);
+                           * activation_function_derivative(layers[self.number_of_layers-i-1])
+                           * mask[self.number_of_layers-i-2];
               {$omp parallel for}
               for var i := 0 to self.number_of_layers-2 do
                 self.neural_network[i].adjust_weights(deltas[self.number_of_layers-2-i]);
@@ -470,11 +470,15 @@ type
                       const number_of_epoch: uint64;
                       alpha: single := 0.01;
                       activation_function: function(const input: Vector): Vector := Functions.relu;
-                      activation_function_derivative: function(const input: Vector): Vector := Functions.relu_derivative);
+                      activation_function_derivative: function(const input: Vector): Vector := Functions.relu_derivative;
+                      dropout_probability: single := 0);
       begin
         if input_data.Count <> output_data.Count then
           raise new System.ArgumentException('Размеры обучающей выборки для входных и выходных данных должны совпадать');
         global_alpha := alpha;
+        if (0 > dropout_probability) or (dropout_probability >= 1) then
+          raise new System.ArgumentException('Вероятность прореживания узлов нейронной сети должна принадлежать [0, 1)');
+        global_dropout_probability := dropout_probability;       
         self.activation_function := activation_function;
         self.activation_function_derivative := activation_function_derivative;
 
@@ -483,11 +487,17 @@ type
       procedure train(const input_data: array of Vector; 
                       const output_data: array of Vector;
                       const number_of_epoch: uint64;
-                      alpha: single := 0.01);
+                      alpha: single := 0.01;
+                      activation_function: function(const input: Vector): Vector := Functions.relu;
+                      activation_function_derivative: function(const input: Vector): Vector := Functions.relu_derivative;
+                      dropout_probability: single := 0);
       begin
         if input_data.Length <> output_data.Length then
           raise new System.ArgumentException('Размеры обучающей выборки для входных и выходных данных должны совпадать');
         global_alpha := alpha;
+        if (0 > dropout_probability) or (dropout_probability >= 1) then
+          raise new System.ArgumentException('Вероятность прореживания узлов нейронной сети должна принадлежать [0, 1)');
+        global_dropout_probability := dropout_probability;       
         self.activation_function := activation_function;
         self.activation_function_derivative := activation_function_derivative;
         
@@ -512,14 +522,13 @@ type
         result := self.run;
       end;
       
-      function dropout_mask(const size: uint64): Vector;
+      function get_dropout_mask(const size: uint64): Vector;
       begin
         result := new Vector;
         result.set_size(size);
-        while result.count(1) <> (size div 2) do
-          {$omp parallel for}
-          for var index := 0 to size-1 do
-            result[index] := random(2);
+        {$omp parallel for}
+        for var index := 0 to size-1 do
+          result[index] := random() < global_dropout_probability? 0: 1;
       end;
   end;
 end.
