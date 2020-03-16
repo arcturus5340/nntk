@@ -1,4 +1,5 @@
-﻿unit vector_math;
+﻿/// Модуль для работы с математическими векторами
+unit vector_math;
 
 type 
   Vector = class
@@ -48,6 +49,18 @@ type
           {$omp parallel for}
           for var index := 0 to self_vector.size-1 do
             tmp_result[index] := self_vector[index] * other_vector[index];
+        result := new Vector(tmp_result);
+      end;
+      
+      static function __div(const self_vector, other_vector: Vector): Vector;
+      var
+        tmp_result: array of single;
+      begin
+        tmp_result := new single[self_vector.size()];
+        tmp_result.Initialize();
+        {$omp parallel for}
+        for var index := 0 to self_vector.size-1 do
+          tmp_result[index] := self_vector[index] / other_vector[0];
         result := new Vector(tmp_result);
       end;
       
@@ -106,6 +119,13 @@ type
           raise new System.ArithmeticException('Размеры векторов не совпадают');
         result := __add(self_vector, other_vector);
       end;  
+      
+      static procedure operator+=(var self_vector: Vector; const other_vector: Vector);
+      begin
+        if self_vector.size <> other_vector.size then
+          raise new System.ArithmeticException('Размеры векторов не совпадают');
+        self_vector := __add(self_vector, other_Vector);
+      end;  
      
       static function operator-(const self_vector, other_vector: Vector): Vector;
       begin
@@ -114,6 +134,13 @@ type
         result := __sub(self_vector, other_vector);
       end;
       
+      static procedure operator-=(var self_vector: Vector; const other_vector: Vector);
+      begin
+        if self_vector.size <> other_vector.size then
+          raise new System.ArithmeticException('Размеры векторов не совпадают');
+        self_vector := __sub(self_vector, other_Vector);
+      end;  
+      
       static function operator*(const self_vector, other_vector: Vector): Vector;
       begin
         if self_vector.size <> other_vector.size then
@@ -121,14 +148,41 @@ type
         result := __mul(self_vector, other_vector);
       end;      
       
+      static procedure operator*=(var self_vector: Vector; const other_vector: Vector);
+      begin
+        if self_vector.size <> other_vector.size then
+          raise new System.ArithmeticException('Размеры векторов не совпадают');
+        self_vector := __mul(self_vector, other_Vector);
+      end;  
+      
       static function operator*(const self_vector: Vector; other_operand: single): Vector;
       begin
         result := __mul(self_vector, new Vector(other_operand));
+      end;
+      
+      static procedure operator*=(var self_vector: Vector; const other_operand: single);
+      begin
+        self_vector := __mul(self_vector, new Vector(other_Vector));
+      end;  
+
+      static function operator/(const self_vector: Vector; other_operand: single): Vector;
+      begin
+        result := __mul(self_vector, new Vector(other_operand));
+      end;
+      
+      static function operator/=(var self_vector: Vector; const other_operand: Vector): Vector;
+      begin
+        self_vector := __div(self_vector, new Vector(other_operand));
       end;
 
       static function operator**(const self_vector: Vector; exponent: byte): Vector;
       begin
         result := __pow(self_vector, exponent);
+      end;
+      
+      static function operator**=(var self_vector: Vector; const exponent: byte): Vector;
+      begin
+        self_vector := __pow(self_vector, exponent);
       end;
          
       /// Возвращает последний элемент вектора
