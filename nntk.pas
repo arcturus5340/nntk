@@ -5,6 +5,7 @@ uses vector_math;
 var 
   global_alpha: single;
   global_dropout_probability: single;
+  global_initializing_weights_range: System.Tuple<real, real>;
 
 type   
   // ********** Раздел функций активации и их производных **********
@@ -333,6 +334,27 @@ type
           else
             result[index] := input[index] - 2*sign(input[index]);
       end;
+      
+      /// Возвращает вектор, к каждому члену которого применена функция активации Softmax
+      static function softmax(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := exp(input[index]);
+        var sum := result.sum();
+        result /= sum;
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Softmax
+      static function softmax_derivative(const input: Vector): Vector;
+      begin
+        result := softmax(input);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := result[index]*(1-result[index]);
+      end;
   end;
 
   Neuron = class
@@ -348,7 +370,8 @@ type
         tmp_result := new single[number_of_weights];
         {$omp parallel for}
         for var index := 0 to number_of_weights-1 do
-          tmp_result[index] := random*2-1;
+          tmp_result[index] := random(global_initializing_weights_range[0],
+                                      global_initializing_weights_range[1]);
         result := new Vector(tmp_result);
       end;
       
@@ -457,6 +480,7 @@ type
         error: single;
       begin
         deltas := new Vector[self.number_of_layers-1]; 
+        {$omp parallel for}
         for var index := 0 to self.number_of_layers-2 do
           begin
           deltas[index] := new Vector;
@@ -479,8 +503,8 @@ type
                 mask[i-1] := get_dropout_mask(layers[i].size());
                 layers[i] *= mask[i-1] * (1/(1-global_dropout_probability));
               end;
-              
-              if (epoch+1) mod 10 = 0 then
+                            
+              if (epoch) mod 10 = 0 then
                 error += ((output_data[index]-layers.last()) ** 2).sum();
                       
               deltas[0] += output_data[index]-layers.last();
@@ -499,7 +523,7 @@ type
                   end;
                 
             end;
-          if (epoch+1) mod 10 = 0 then
+          if (epoch) mod 10 = 0 then
             begin
             println('Error: ', error / input_data.count);
             error := 0.0;
@@ -509,9 +533,11 @@ type
       
     public
       /// Инициализирует объект класса Neural_Network с заданной топологией
-      constructor Create(const neural_network_topology: Vector);
+      constructor Create(const neural_network_topology: Vector;
+                         initializing_weights_range: System.Tuple<real, real> := (-1.0, 1.0));
       begin
         self.topology := neural_network_topology;
+        global_initializing_weights_range := initializing_weights_range;
         self.number_of_layers := neural_network_topology.size();
         if self.number_of_layers < 2 then
           raise new System.ArgumentException('Кол-во слоев ИНС должно быть больше 1');
@@ -566,6 +592,7 @@ type
                       activation_function_derivative: function(const input: Vector): Vector := Functions.relu_derivative;
                       dropout_probability: single := 0.0;
                       batch_size: uint64 := 1);
+                      
       begin
         if input_data.Length <> output_data.Length then
           raise new System.ArgumentException('Размеры обучающей выборки для входных и выходных данных должны совпадать');
