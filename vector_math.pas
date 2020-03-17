@@ -162,7 +162,7 @@ type
       
       static procedure operator*=(var self_vector: Vector; const other_operand: single);
       begin
-        self_vector := __mul(self_vector, new Vector(other_Vector));
+        self_vector := __mul(self_vector, new Vector(other_operand));
       end;  
 
       static function operator/(const self_vector: Vector; other_operand: single): Vector;
@@ -170,7 +170,7 @@ type
         result := __mul(self_vector, new Vector(other_operand));
       end;
       
-      static function operator/=(var self_vector: Vector; const other_operand: Vector): Vector;
+      static procedure operator/=(var self_vector: Vector; const other_operand: single);
       begin
         self_vector := __div(self_vector, new Vector(other_operand));
       end;
@@ -180,11 +180,6 @@ type
         result := __pow(self_vector, exponent);
       end;
       
-      static function operator**=(var self_vector: Vector; const exponent: byte): Vector;
-      begin
-        self_vector := __pow(self_vector, exponent);
-      end;
-         
       /// Возвращает последний элемент вектора
       function back(): single;
       begin
