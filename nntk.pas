@@ -7,6 +7,7 @@ var
   global_dropout_probability: single;
 
 type   
+  // ********** Раздел функций активации и их производных **********
   Functions = class
     public
       /// Возвращает вектор, к каждому члену которого применена функция активации Линейный выпрямитель
@@ -374,7 +375,7 @@ type
       /// Изменяет веса с учетом ошибки delta
       procedure adjust_weights(const delta: single);
       begin
-        self.weights := self.weights + self.input * delta * global_alpha;
+        self.weights += self.input * delta * global_alpha;
       end;
       
       function ToString: string; override;
@@ -416,7 +417,7 @@ type
         result := self.layer[0].backprop(input[0]);
         {$omp parallel for reduction(+:result)}
         for var index := 1 to self.layer.Length-1 do
-          result := result + self.layer[index].backprop(input[index]);
+          result += self.layer[index].backprop(input[index]);
       end;
       
       /// Изменяет веса нейронов слоя с учетом ошибки delta
@@ -439,10 +440,11 @@ type
   Neural_Network = class
     private
       neural_network: array of Layer;
-      input_size: uint64;
+      topology: Vector;
       number_of_layers: uint64;
       activation_function: function(const input: Vector): Vector;
       activation_function_derivative: function(const input: Vector): Vector;
+      batch_size: uint64;
 
       /// Обучает нейронную сеть на входных данных input_data и выходных данных output_data number_of_epoch эпох 
       procedure __train(const input_data: List<Vector>; 
@@ -454,8 +456,13 @@ type
         mask: array of Vector;
         error: single;
       begin
-        deltas := new Vector[self.number_of_layers-1];
-        layers := new Vector[self.number_of_layers]; 
+        deltas := new Vector[self.number_of_layers-1]; 
+        for var index := 0 to self.number_of_layers-2 do
+          begin
+          deltas[index] := new Vector;
+          deltas[index].set_size(trunc(topology[self.number_of_layers-index-1]));
+          end;
+        layers := new Vector[self.number_of_layers];
         mask := new Vector[self.number_of_layers-1];
 
         for var epoch := 1 to number_of_epoch do
@@ -464,25 +471,35 @@ type
             begin
               layers[0] := input_data[index];
               for var i := 0 to self.number_of_layers-2 do
-                begin
                 layers[i+1] := activation_function(self.neural_network[i].calculate(layers[i]));
-                mask[i] := get_dropout_mask(layers[i+1].size());
-                layers[i+1] := layers[i+1] * mask[i] * (1/(1-global_dropout_probability));
-                end;
               
-              if epoch mod 10 = 0 then
+              {$omp parallel for}
+              for var i := 1 to self.number_of_layers-2 do
+              begin
+                mask[i-1] := get_dropout_mask(layers[i].size());
+                layers[i] *= mask[i-1] * (1/(1-global_dropout_probability));
+              end;
+              
+              if (epoch+1) mod 10 = 0 then
                 error += ((output_data[index]-layers.last()) ** 2).sum();
                       
-              deltas[0] := output_data[index]-layers.last();
+              deltas[0] += output_data[index]-layers.last();
               for var i := 1 to self.number_of_layers-2 do
-                deltas[i] := self.neural_network[self.number_of_layers-i-1].backprop(deltas[i-1])
+                deltas[i] += self.neural_network[self.number_of_layers-i-1].backprop(deltas[i-1])
                            * activation_function_derivative(layers[self.number_of_layers-i-1])
                            * mask[self.number_of_layers-i-2];
-              {$omp parallel for}
-              for var i := 0 to self.number_of_layers-2 do
-                self.neural_network[i].adjust_weights(deltas[self.number_of_layers-2-i]);
+
+              if ((epoch-1)*input_data.Count+index+1) mod self.batch_size = 0 then
+                {$omp parallel for}
+                for var i := 0 to self.number_of_layers-2 do
+                  begin
+                  self.neural_network[i].adjust_weights(deltas[self.number_of_layers-2-i]/self.batch_size);
+                  deltas[i] := new Vector;
+                  deltas[i].set_size(trunc(topology[self.number_of_layers-i-1]));
+                  end;
+                
             end;
-          if epoch mod 10 = 0 then
+          if (epoch+1) mod 10 = 0 then
             begin
             println('Error: ', error / input_data.count);
             error := 0.0;
@@ -494,8 +511,8 @@ type
       /// Инициализирует объект класса Neural_Network с заданной топологией
       constructor Create(const neural_network_topology: Vector);
       begin
+        self.topology := neural_network_topology;
         self.number_of_layers := neural_network_topology.size();
-        self.input_size := trunc(neural_network_topology[0]);
         if self.number_of_layers < 2 then
           raise new System.ArgumentException('Кол-во слоев ИНС должно быть больше 1');
         self.neural_network := new Layer[self.number_of_layers-1];
@@ -510,13 +527,15 @@ type
       /// Функция активации activation_function (по умолчанию nntk.functions.relu) 
       /// Производная фукции активации activation_function_derivative (по умолчанию nntk.functions.relu_derivative)
       /// Вероятность прореживания dropout_probability (по умолчанию 0.0 - Прореживание не проводится)
+      /// Размер пакета разности весов batch_size (по умолчанию 1 - Обучение происходит на каждом отдельном примере)
       procedure train(const input_data: List<Vector>; 
                       const output_data: List<Vector>;
                       const number_of_epoch: uint64;
                       alpha: single := 0.01;
                       activation_function: function(const input: Vector): Vector := Functions.relu;
                       activation_function_derivative: function(const input: Vector): Vector := Functions.relu_derivative;
-                      dropout_probability: single := 0.0);
+                      dropout_probability: single := 0.0; 
+                      batch_size: uint64 := 1);
       begin
         if input_data.Count <> output_data.Count then
           raise new System.ArgumentException('Размеры обучающей выборки для входных и выходных данных должны совпадать');
@@ -524,24 +543,29 @@ type
         if (0 > dropout_probability) or (dropout_probability >= 1) then
           raise new System.ArgumentException('Вероятность прореживания узлов нейронной сети должна принадлежать [0, 1)');
         global_dropout_probability := dropout_probability;       
+        if batch_size < 1 then
+          raise new System.ArgumentException('Размер пакетов разности весов должен быть больше нуля');
+        self.batch_size := batch_size;
         self.activation_function := activation_function;
         self.activation_function_derivative := activation_function_derivative;
-
+        __train(input_data, output_data, number_of_epoch);  
+      end;
+      
       /// Обучает нейронную сеть на входных данных input_data и выходных данных output_data number_of_epoch эпох
       /// Необязательные параметры:
       /// Коэффициент обучаемости alpha (по умолчанию 0.01)
       /// Функция активации activation_function (по умолчанию nntk.functions.relu) 
       /// Производная фукции активации activation_function_derivative (по умолчанию nntk.functions.relu_derivative)
       /// Вероятность прореживания dropout_probability (по умолчанию 0.0 - Прореживание не проводится)
-        __train(input_data, output_data, number_of_epoch);  
-      end;
+      /// Размер пакета разности весов batch_size (по умолчанию 1 - Обучение происходит на каждом отдельном примере)
       procedure train(const input_data: array of Vector; 
                       const output_data: array of Vector;
                       const number_of_epoch: uint64;
                       alpha: single := 0.01;
                       activation_function: function(const input: Vector): Vector := Functions.relu;
                       activation_function_derivative: function(const input: Vector): Vector := Functions.relu_derivative;
-                      dropout_probability: single := 0.0);
+                      dropout_probability: single := 0.0;
+                      batch_size: uint64 := 1);
       begin
         if input_data.Length <> output_data.Length then
           raise new System.ArgumentException('Размеры обучающей выборки для входных и выходных данных должны совпадать');
@@ -549,9 +573,11 @@ type
         if (0 > dropout_probability) or (dropout_probability >= 1) then
           raise new System.ArgumentException('Вероятность прореживания узлов нейронной сети должна принадлежать [0, 1)');
         global_dropout_probability := dropout_probability;       
+        if batch_size < 1 then
+          raise new System.ArgumentException('Размер пакетов разности весов должен быть больше нуля');
+        self.batch_size := batch_size;        
         self.activation_function := activation_function;
         self.activation_function_derivative := activation_function_derivative;
-        
         __train(new List<Vector>(input_data),
                 new List<Vector>(output_data), 
                 number_of_epoch);
@@ -560,7 +586,7 @@ type
       /// Возвращает результат работы нейронной сети для входных данных input_data
       function run(const input_data: Vector): Vector;
       begin
-      if input_data.size() <> self.input_size then
+      if input_data.size() <> self.topology[0] then
           raise new System.ArgumentException('Размеры первого слоя ИНС и входных данных должны совпадать');  
       var layers := new Vector[self.number_of_layers];
       layers[0] := input_data;
@@ -568,7 +594,7 @@ type
         layers[i+1] := activation_function(self.neural_network[i].calculate(layers[i]));
       result := layers[self.number_of_layers-1];
       end;
-   
+      
       /// Возвращает модель нейронной сети в виде функции
       function get_model(): function (input_data: Vector): Vector;
       begin
@@ -585,4 +611,7 @@ type
           result[index] := random() < global_dropout_probability? 0: 1;
       end;
   end;
+  
+begin
+  Randomize;
 end.
