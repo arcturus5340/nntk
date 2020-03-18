@@ -395,7 +395,6 @@ type
       function backprop(const input: single): Vector;
       begin
         result := self.weights * input;
-//        println('W: ', result);
       end;
       
       /// Изменяет веса с учетом ошибки delta
@@ -500,43 +499,31 @@ type
             begin
               layers[0] := input_data[index];
               for var i := 0 to self.number_of_layers-2 do
-              begin
                 layers[i+1] := self.activation_functions[i](self.neural_network[i].calculate(layers[i]));
-//                println(layers[i+1]);
-end;
+              
               {$omp parallel for}
               for var i := 1 to self.number_of_layers-2 do
               begin
                 mask[i-1] := get_dropout_mask(layers[i].size());
                 layers[i] *= mask[i-1] * (1/(1-global_dropout_probability));
               end; 
-              //println(layers.last());
                             
               if (epoch) mod 10 = 0 then
                 error += ((output_data[index]-layers.last()) ** 2).sum()/output_data[index].size();
+              
               deltas[0] += output_data[index]-layers.last();
               for var i := 1 to self.number_of_layers-2 do
               begin
-//                println('Deltas val: ', self.neural_network[self.number_of_layers-i-1].backprop(deltas[i-1])
-//                           , self.activation_functions_derivatives[self.number_of_layers-i-1](layers[self.number_of_layers-i-1])
-//                           );
                 deltas[i] += self.neural_network[self.number_of_layers-i-1].backprop(deltas[i-1])
                            * self.activation_functions_derivatives[self.number_of_layers-i-1](layers[self.number_of_layers-i-1])
                            * mask[self.number_of_layers-i-2];
                 end;
               if ((epoch-1)*input_data.Count+index+1) mod self.batch_size = 0 then
-//                println('Deltas: ', deltas);
-                
                 {$omp parallel for}
                 for var i := 0 to self.number_of_layers-2 do
-                begin
-//                  println(index, ' InBatch: ', deltas[self.number_of_layers-2-i]/self.batch_size);
                   self.neural_network[i].adjust_weights(deltas[self.number_of_layers-2-i]/self.batch_size);
                   deltas[self.number_of_layers-2-i] := new Vector;
                   deltas[self.number_of_layers-2-i].set_size(trunc(topology[i+1]));
-//                  println(index, ' OutDeltas: ', deltas[self.number_of_layers-2-i]);
-                  end;
-                
             end;
           if (epoch) mod 10 = 0 then
             begin
@@ -595,10 +582,8 @@ end;
         self.neural_network := new Layer[self.number_of_layers-1];
         {$omp parallel for}
         for var index := 1 to self.number_of_layers-1 do
-          begin
           self.neural_network[index-1] := new Layer(trunc(neural_network_topology[index]),
                                                     trunc(neural_network_topology[index-1]));
-          end;
         end;
       /// Обучает нейронную сеть на входных данных input_data и выходных данных output_data number_of_epoch эпох
       /// Необязательные параметры:
