@@ -167,7 +167,7 @@ type
 
       static function operator/(const self_vector: Vector; other_operand: single): Vector;
       begin
-        result := __mul(self_vector, new Vector(other_operand));
+        result := __div(self_vector, new Vector(other_operand));
       end;
       
       static procedure operator/=(var self_vector: Vector; const other_operand: single);
