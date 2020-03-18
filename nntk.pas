@@ -62,7 +62,7 @@ type
         result.set_size(input.size);
         {$omp parallel for}
         for var index := 0 to input.size-1 do
-          if input[index] > 0 then
+          if input[index] > 0.5 then
             result[index] := 1
           else
             result[index] := 0;
@@ -118,7 +118,7 @@ type
         result.set_size(input.size);
         {$omp parallel for}
         for var index := 0 to input.size-1 do
-          result[index] := 1-System.Math.Tanh(input[index]);
+          result[index] := 1-System.Math.Tanh(input[index])**2;
       end;
       
       /// Возвращает вектор, к каждому члену которого применена функции активации Арктангенс
@@ -395,6 +395,7 @@ type
       function backprop(const input: single): Vector;
       begin
         result := self.weights * input;
+//        println('W: ', result);
       end;
       
       /// Изменяет веса с учетом ошибки delta
@@ -500,38 +501,44 @@ type
               layers[0] := input_data[index];
               for var i := 0 to self.number_of_layers-2 do
               begin
-//                println(self.neural_network[i], '***', self.neural_network[i].calculate(layers[i]),'***', self.activation_functions[i](new Vector(0, 0, 0, 0)));
                 layers[i+1] := self.activation_functions[i](self.neural_network[i].calculate(layers[i]));
-              end;
-//              {$omp parallel for}
-//              for var i := 1 to self.number_of_layers-2 do
-//              begin
-//                mask[i-1] := get_dropout_mask(layers[i].size());
-//                layers[i] *= mask[i-1] * (1/(1-global_dropout_probability));
-//              end;
-//              println(layers);
+//                println(layers[i+1]);
+end;
+              {$omp parallel for}
+              for var i := 1 to self.number_of_layers-2 do
+              begin
+                mask[i-1] := get_dropout_mask(layers[i].size());
+                layers[i] *= mask[i-1] * (1/(1-global_dropout_probability));
+              end; 
+              //println(layers.last());
                             
-              if (epoch) mod 1 = 0 then
-                error += ((output_data[index]-layers.last()) ** 2).sum();
-//              println('D: ', deltas);
+              if (epoch) mod 10 = 0 then
+                error += ((output_data[index]-layers.last()) ** 2).sum()/output_data[index].size();
               deltas[0] += output_data[index]-layers.last();
               for var i := 1 to self.number_of_layers-2 do
+              begin
+//                println('Deltas val: ', self.neural_network[self.number_of_layers-i-1].backprop(deltas[i-1])
+//                           , self.activation_functions_derivatives[self.number_of_layers-i-1](layers[self.number_of_layers-i-1])
+//                           );
                 deltas[i] += self.neural_network[self.number_of_layers-i-1].backprop(deltas[i-1])
-                           * self.activation_functions_derivatives[self.number_of_layers-i-1](layers[self.number_of_layers-i-1]);
-//                           * mask[self.number_of_layers-i-2];
- 
-//              println('D: ', deltas);
-//              if ((epoch-1)*input_data.Count+index+1) mod self.batch_size = 0 then
+                           * self.activation_functions_derivatives[self.number_of_layers-i-1](layers[self.number_of_layers-i-1])
+                           * mask[self.number_of_layers-i-2];
+                end;
+              if ((epoch-1)*input_data.Count+index+1) mod self.batch_size = 0 then
+//                println('Deltas: ', deltas);
+                
                 {$omp parallel for}
                 for var i := 0 to self.number_of_layers-2 do
-                  begin
-                  self.neural_network[i].adjust_weights(deltas[self.number_of_layers-2-i]);
+                begin
+//                  println(index, ' InBatch: ', deltas[self.number_of_layers-2-i]/self.batch_size);
+                  self.neural_network[i].adjust_weights(deltas[self.number_of_layers-2-i]/self.batch_size);
                   deltas[self.number_of_layers-2-i] := new Vector;
                   deltas[self.number_of_layers-2-i].set_size(trunc(topology[i+1]));
+//                  println(index, ' OutDeltas: ', deltas[self.number_of_layers-2-i]);
                   end;
                 
             end;
-          if (epoch) mod 1 = 0 then
+          if (epoch) mod 10 = 0 then
             begin
             println('Error: ', error / input_data.count);
             error := 0.0;
@@ -547,8 +554,7 @@ type
                          activation_functions_derivatives: array of nntk.functions_type := nil;
                          seed: integer := 0);
       begin
-        Randomize(seed); 
-        self.seed := seed;
+        Randomize(seed);
         self.topology := neural_network_topology;
                 self.number_of_layers := neural_network_topology.size();
         if self.number_of_layers < 2 then
