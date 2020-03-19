@@ -39,7 +39,7 @@ begin
                                ACTIVATION_FUNCTIONS,
                                ACTIVATION_FUNCTIONS_DERIVATIVES,
                                SEED);
-  nn.train(ipt, opt, 
+  nn.train(ipt, opt, ipt, opt, 
            EPOCHS_COUNT, 
            LEARNING_RATE, 
            DROPOUT_PROBABILITY,

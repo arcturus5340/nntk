@@ -2,9 +2,9 @@
 
 const
   LEARNING_RATE = 0.0015;
-  EPOCHS_COUNT = 200;
+  EPOCHS_COUNT = 300;
   DROPOUT_PROBABILITY = 0.5;
-  BATCH_SIZE = 100;
+  BATCH_SIZE = 8;
   SEED = 0;
   
 var
@@ -31,37 +31,34 @@ begin
       x.push_back(real.Parse(num));
     opt.Add(x);
   end; 
+  
+  var test_ipt := new List<Vector>;
+  foreach var str in ReadallLines('test_images.txt') do
+  begin  
+    var x := new Vector;
+    foreach var num in str.Split(' ') do
+      x.push_back(real.Parse(num));
+    test_ipt.Add(x);
+  end;
+  var test_opt := new List<Vector>;
+  foreach var str in ReadallLines('test_labels.txt') do
+  begin  
+    var x := new Vector;
+    foreach var num in str.Split(' ') do
+      x.push_back(real.Parse(num));
+    test_opt.Add(x);
+  end; 
+
   var size := new Vector(784, 100, 10); 
   var nn := new Neural_Network(size, 
                                INITIALIZING_WEIGHTS_RANGE, 
                                ACTIVATION_FUNCTIONS, 
                                ACTIVATION_FUNCTIONS_DERIVATIVES,
                                SEED);
-  nn.train(ipt, opt, 
+  nn.train(ipt, opt, test_ipt, test_opt,
            EPOCHS_COUNT, 
            LEARNING_RATE, 
            DROPOUT_PROBABILITY,
            BATCH_SIZE);
-  
-//  var my_model := nn.get_model();
-//  ipt := new List<Vector>;
-//  foreach var str in ReadallLines('test_images.txt') do
-//  begin  
-//    var x := new Vector;
-//    foreach var num in str.Split(' ') do
-//      x.push_back(real.Parse(num));
-//    ipt.Add(x);
-//  end;
-//  opt := new List<Vector>;
-//  foreach var str in ReadallLines('test_labels.txt') do
-//  begin  
-//    var x := new Vector;
-//    foreach var num in str.Split(' ') do
-//      x.push_back(real.Parse(num));
-//    opt.Add(x);
-//  end; 
-//  var error := 0.0;
-//  println(ipt.Count);
-//  for var index := 0 to ipt.Count-1 do 
-//    println('Error: ', ((my_model(ipt[index]) - opt[index]) ** 2).sum());
+           
 end.
