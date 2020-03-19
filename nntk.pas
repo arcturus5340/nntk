@@ -474,14 +474,17 @@ type
       batch_size: uint64;
 
       /// Обучает нейронную сеть на входных данных input_data и выходных данных output_data number_of_epoch эпох 
-      procedure __train(const input_data: List<Vector>; 
-                        const output_data: List<Vector>;
+      procedure __train(const train_input_data: List<Vector>; 
+                        const train_output_data: List<Vector>;
+                        const test_input_data: List<Vector>;
+                        const test_output_data: List<Vector>;
                         const number_of_epoch: uint64);
       var
         deltas: array of Vector;
         layers: array of Vector;
         mask: array of Vector;
         error: real;
+        test_error: real;
       begin
         deltas := new Vector[self.number_of_layers-1]; 
         {$omp parallel for}
@@ -495,9 +498,10 @@ type
 
         for var epoch := 1 to number_of_epoch do
         begin 
-          for var index := 0 to input_data.count-1 do
+          error := 0.0;
+          for var index := 0 to train_input_data.count-1 do
             begin
-              layers[0] := input_data[index];
+              layers[0] := train_input_data[index];
               for var i := 0 to self.number_of_layers-2 do
                 layers[i+1] := self.activation_functions[i](self.neural_network[i].calculate(layers[i]));
               
@@ -508,27 +512,36 @@ type
                 layers[i] *= mask[i-1] * (1/(1-global_dropout_probability));
               end; 
                             
-              if (epoch) mod 10 = 0 then
-                error += ((output_data[index]-layers.last()) ** 2).sum()/output_data[index].size();
-              
-              deltas[0] += output_data[index]-layers.last();
+              error += ((train_output_data[index]-layers.last()) ** 2).sum()/layers.last().size();
+
+              deltas[0] += train_output_data[index]-layers.last();
               for var i := 1 to self.number_of_layers-2 do
-              begin
                 deltas[i] += self.neural_network[self.number_of_layers-i-1].backprop(deltas[i-1])
                            * self.activation_functions_derivatives[self.number_of_layers-i-1](layers[self.number_of_layers-i-1])
                            * mask[self.number_of_layers-i-2];
-                end;
-              if ((epoch-1)*input_data.Count+index+1) mod self.batch_size = 0 then
+
+              if ((epoch-1)*train_input_data.Count+index+1) mod self.batch_size = 0 then
                 {$omp parallel for}
                 for var i := 0 to self.number_of_layers-2 do
+                begin
                   self.neural_network[i].adjust_weights(deltas[self.number_of_layers-2-i]/self.batch_size);
                   deltas[self.number_of_layers-2-i] := new Vector;
                   deltas[self.number_of_layers-2-i].set_size(trunc(topology[i+1]));
+                  end;
             end;
           if (epoch) mod 10 = 0 then
-            begin
-            println('Error: ', error / input_data.count);
-            error := 0.0;
+          begin
+            for var index := 0 to test_input_data.count-1 do
+              begin
+              layers[0] := test_input_data[index];
+              for var i := 0 to self.number_of_layers-2 do
+                layers[i+1] := self.activation_functions[i](self.neural_network[i].calculate(layers[i]));
+              test_error += ((test_output_data[index]-layers.last()) ** 2).sum()/layers.last().size();
+              end;
+              
+            println(format('I:{0} Train-Error:{1,7:f5}   Test-Error:{2,7:f5}', 
+                           epoch, error/train_input_data.count, test_error/test_input_data.count));
+            test_error := 0.0;
             end;
           end;
       end;
@@ -592,14 +605,16 @@ type
       /// Массив производных фукций активации для разных слоев ИНС activation_function_derivatives (по умолчанию nntk.functions.relu_derivative)
       /// Вероятность прореживания dropout_probability (по умолчанию 0.0 - Прореживание не проводится)
       /// Размер пакета разности весов batch_size (по умолчанию 1 - Обучение происходит на каждом отдельном примере)
-      procedure train(const input_data: List<Vector>; 
-                      const output_data: List<Vector>;
+      procedure train(const train_input_data: List<Vector>; 
+                      const train_output_data: List<Vector>;
+                      const test_input_data: List<Vector>;
+                      const test_output_data: List<Vector>;
                       const number_of_epoch: uint64;
                       alpha: single := 0.01;
                       dropout_probability: single := 0.0; 
                       batch_size: uint64 := 1);
       begin
-        if input_data.Count <> output_data.Count then
+        if train_input_data.Count <> train_output_data.Count then
           raise new System.ArgumentException('Размеры обучающей выборки для входных и выходных данных должны совпадать');
         global_alpha := alpha;
         if (0 > dropout_probability) or (dropout_probability >= 1) then
@@ -608,7 +623,7 @@ type
         if batch_size < 1 then
           raise new System.ArgumentException('Размер пакетов разности весов должен быть больше нуля');
         self.batch_size := batch_size;
-        __train(input_data, output_data, number_of_epoch);  
+        __train(train_input_data, train_output_data, test_input_data, test_output_data, number_of_epoch);  
       end;
       
       /// Обучает нейронную сеть на входных данных input_data и выходных данных output_data number_of_epoch эпох
@@ -618,15 +633,17 @@ type
       /// Производная фукции активации activation_function_derivative (по умолчанию nntk.functions.relu_derivative)
       /// Вероятность прореживания dropout_probability (по умолчанию 0.0 - Прореживание не проводится)
       /// Размер пакета разности весов batch_size (по умолчанию 1 - Обучение происходит на каждом отдельном примере)
-      procedure train(const input_data: array of Vector; 
-                      const output_data: array of Vector;
+      procedure train(const train_input_data: array of Vector; 
+                      const train_output_data: array of Vector;
+                      const test_input_data: array of Vector; 
+                      const test_output_data: array of Vector;
                       const number_of_epoch: uint64;
                       alpha: single := 0.01;
                       dropout_probability: single := 0.0;
                       batch_size: uint64 := 1);
                       
       begin
-        if input_data.Length <> output_data.Length then
+        if train_input_data.Length <> train_output_data.Length then
           raise new System.ArgumentException('Размеры обучающей выборки для входных и выходных данных должны совпадать');
         global_alpha := alpha;
         if (0 > dropout_probability) or (dropout_probability >= 1) then
@@ -635,9 +652,12 @@ type
         if batch_size < 1 then
           raise new System.ArgumentException('Размер пакетов разности весов должен быть больше нуля');
         self.batch_size := batch_size;        
-        __train(new List<Vector>(input_data),
-                new List<Vector>(output_data), 
+        __train(new List<Vector>(train_input_data), 
+                new List<Vector>(train_output_data), 
+                new List<Vector>(test_input_data), 
+                new List<Vector>(test_output_data), 
                 number_of_epoch);
+
       end;
 
       /// Возвращает результат работы нейронной сети для входных данных input_data
