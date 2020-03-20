@@ -11,7 +11,7 @@ type
   functions_type = function(const input: Vector): Vector;
 
   // ********** Раздел функций активации и их производных **********
-  Functions = class
+  functions = class
     public
       /// Возвращает вектор, к каждому члену которого применена функция активации Линейный выпрямитель
       static function relu(const input: Vector): Vector;
@@ -358,6 +358,26 @@ type
           result[index] := result[index]*(1-result[index]);
       end;
   end;
+  
+  loss_functions_type = function(const true_answer, received_answer: Vector): real;
+    
+  loss_functions = class
+    public
+      static function mse(const true_answer, received_answer: Vector): real;
+      begin
+        result := ((true_answer-received_answer)**2).sum()/received_answer.size();
+      end;
+
+      static function root_mse(const true_answer, received_answer: Vector): real;
+      begin
+        result := System.Math.Sqrt(((true_answer-received_answer)**2).sum()/received_answer.size());
+      end;
+      
+      static function arctan(const true_answer, received_answer: Vector): real;
+      begin
+        result := ((true_answer-received_answer)**2).sum()/received_answer.size()
+      end;
+  end;
 
   Neuron = class
     private
@@ -471,6 +491,7 @@ type
       number_of_layers: uint64;
       activation_functions: array of function(const input: Vector): Vector;
       activation_functions_derivatives: array of nntk.functions_type;
+      loss_function: loss_functions_type;
       batch_size: uint64;
 
       /// Обучает нейронную сеть на входных данных input_data и выходных данных output_data number_of_epoch эпох 
@@ -512,7 +533,7 @@ type
                 layers[i] *= mask[i-1] * (1/(1-global_dropout_probability));
               end; 
                             
-              error += ((train_output_data[index]-layers.last()) ** 2).sum()/layers.last().size();
+              error += self.loss_function(train_output_data[index], layers.Last);
 
               deltas[0] += train_output_data[index]-layers.last();
               for var i := 1 to self.number_of_layers-2 do
@@ -536,7 +557,7 @@ type
               layers[0] := test_input_data[index];
               for var i := 0 to self.number_of_layers-2 do
                 layers[i+1] := self.activation_functions[i](self.neural_network[i].calculate(layers[i]));
-              test_error += ((test_output_data[index]-layers.last()) ** 2).sum()/layers.last().size();
+              test_error += self.loss_function(test_output_data[index], layers.Last);
               end;
               
             println(format('I:{0} Train-Error:{1,7:f5}   Test-Error:{2,7:f5}', 
@@ -611,12 +632,14 @@ type
                       const test_output_data: List<Vector>;
                       const number_of_epoch: uint64;
                       alpha: single := 0.01;
+                      loss_function: loss_functions_type := nntk.loss_functions.mse;
                       dropout_probability: single := 0.0; 
                       batch_size: uint64 := 1);
       begin
         if train_input_data.Count <> train_output_data.Count then
           raise new System.ArgumentException('Размеры обучающей выборки для входных и выходных данных должны совпадать');
         global_alpha := alpha;
+        self.loss_function := loss_function;
         if (0 > dropout_probability) or (dropout_probability >= 1) then
           raise new System.ArgumentException('Вероятность прореживания узлов нейронной сети должна принадлежать [0, 1)');
         global_dropout_probability := dropout_probability;       
@@ -639,6 +662,7 @@ type
                       const test_output_data: array of Vector;
                       const number_of_epoch: uint64;
                       alpha: single := 0.01;
+                      loss_function: loss_functions_type := nntk.loss_functions.mse;
                       dropout_probability: single := 0.0;
                       batch_size: uint64 := 1);
                       
@@ -646,6 +670,7 @@ type
         if train_input_data.Length <> train_output_data.Length then
           raise new System.ArgumentException('Размеры обучающей выборки для входных и выходных данных должны совпадать');
         global_alpha := alpha;
+        self.loss_function := loss_function;
         if (0 > dropout_probability) or (dropout_probability >= 1) then
           raise new System.ArgumentException('Вероятность прореживания узлов нейронной сети должна принадлежать [0, 1)');
         global_dropout_probability := dropout_probability;       
