@@ -357,6 +357,26 @@ type
           result[index] := result[index]*(1-result[index]);
       end;
   end;
+  
+  loss_functions_type = function(const true_answer, received_answer: Vector): real;
+
+  loss_functions = class
+    public
+      static function mse(const true_answer, received_answer: Vector): real;
+      begin
+        result := ((true_answer-received_answer)**2).sum()/received_answer.size();
+      end;
+
+      static function root_mse(const true_answer, received_answer: Vector): real;
+      begin
+        result := System.Math.Sqrt(((true_answer-received_answer)**2).sum()/received_answer.size());
+      end;
+
+      static function arctan(const true_answer, received_answer: Vector): real;
+      begin
+        result := ((true_answer-received_answer)**2).sum()/received_answer.size()
+      end;
+  end;
 
   Neuron = class
     private
@@ -405,28 +425,6 @@ type
       function ToString: string; override;
       begin
         result := 'Нейрон (Веса): ' + self.weights.ToString;
-      end;
-    end;
-    
-  InputNeuron = class
-    private
-      output_data: single;
-      
-    public
-      /// Инициализирует новый экземпляр класса Neuron с number_of_inputs входов
-      procedure set_data(const data: single);
-      begin
-        self.output_data := data;
-      end;
-      
-      function get_data(): single;
-      begin
-        result := self.output_data;
-      end;
-      
-      function ToString: string; override;
-      begin
-        result := 'Входной Нейрон (Значение): ' + self.output_data.ToString;
       end;
     end;
 
@@ -483,43 +481,6 @@ type
       end;
     end;
 
-
-  InputLayer = class(Layer)
-    private
-      layer: array of InputNeuron;
-      
-    public
-      /// Инициализирует новый экземпляр класса Layer с number_of_neurons нейронов и number_of_weights входов для каждого
-      constructor Create(const number_of_neurons: uint64);
-      begin
-        if number_of_neurons < 1 then
-          raise new System.ArgumentException('Размеры входного слоя ИНС должны быть больше 0');
-
-        self.layer := new InputNeuron[number_of_neurons];
-        {$omp parallel for}
-        for var index := 0 to number_of_neurons-1 do
-          self.layer[index] := new InputNeuron();
-      end;
-      
-      /// Возвращает ненормализированный вектор выходных значений слоя
-      function calculate(): Vector;
-      begin
-        result := new Vector;
-        result.set_size(self.layer.Length);
-        {$omp parallel for}
-        for var index := 0 to self.layer.length-1 do
-          result[index] := self.layer[index].get_data(); 
-      end;
-      
-      function ToString: string; override;
-      begin
-        result := 'Входной Слой: ';
-        for var index := 0 to layer.Length-2 do
-          result += layer[index].ToString + ' | ';
-        result += layer[layer.Length-1].ToString;
-      end;
-    end;
-
   Neural_Network = class
     private
       seed: integer;
@@ -529,6 +490,7 @@ type
       number_of_layers: uint64;
       activation_functions: array of function(const input: Vector): Vector;
       activation_functions_derivatives: array of nntk.functions_type;
+      loss_function: loss_functions_type;
       batch_size: uint64;
 
       /// Обучает нейронную сеть на входных данных input_data и выходных данных output_data number_of_epoch эпох 
@@ -570,7 +532,7 @@ type
                 layers[i] *= mask[i-1] * (1/(1-global_dropout_probability));
               end; 
                             
-              error += ((train_output_data[index]-layers.last()) ** 2).sum()/layers.last().size();
+              error += self.loss_function(train_output_data[index], layers.Last);
 
               deltas[0] += train_output_data[index]-layers.last();
               for var i := 1 to self.number_of_layers-2 do
@@ -594,7 +556,7 @@ type
               layers[0] := test_input_data[index];
               for var i := 0 to self.number_of_layers-2 do
                 layers[i+1] := self.activation_functions[i](self.neural_network[i].calculate(layers[i]));
-              test_error += ((test_output_data[index]-layers.last()) ** 2).sum()/layers.last().size();
+              test_error += self.loss_function(test_output_data[index], layers.Last);
               end;
               
             println(format('I:{0} Train-Error:{1,7:f5}   Test-Error:{2,7:f5}', 
@@ -626,7 +588,7 @@ type
           for var index := 0 to self.number_of_layers-2 do
             self.activation_functions[index] := nntk.Functions.sigmoid;
           end
-        else if activation_functions.Length <> self.number_of_layers then
+        else if activation_functions.Length <> self.number_of_layers-1 then
           raise new System.ArgumentException('Кол-во функций активации и кол-во слоев ИНС данных должны совпадать')
         else
           begin
@@ -641,7 +603,7 @@ type
           for var index := 0 to self.number_of_layers-2 do
             self.activation_functions_derivatives[index] := nntk.Functions.sigmoid_derivative;
           end
-        else if activation_functions_derivatives.length <> self.number_of_layers then
+        else if activation_functions_derivatives.length <> self.number_of_layers-1 then
           raise new System.ArgumentException('Кол-во производных функций активации и кол-во слоев ИНС данных должны совпадать')
         else
           begin
@@ -650,13 +612,11 @@ type
               self.activation_functions_derivatives[index] := activation_functions_derivatives[index];
           end;
           
-        self.neural_network := new Layer[self.number_of_layers];
-        self.neural_network[0] := new InputLayer(trunc(neural_network_topology[0]));
+        self.neural_network := new Layer[self.number_of_layers-1];
         {$omp parallel for}
         for var index := 1 to self.number_of_layers-1 do
-          self.neural_network[index] := new Layer(trunc(neural_network_topology[index]),
+          self.neural_network[index-1] := new Layer(trunc(neural_network_topology[index]),
                                                   trunc(neural_network_topology[index-1]));
-        println(self.neural_network);
         end;
         
       /// Обучает нейронную сеть на входных данных input_data и выходных данных output_data number_of_epoch эпох
@@ -672,12 +632,14 @@ type
                       const test_output_data: List<Vector>;
                       const number_of_epoch: uint64;
                       alpha: single := 0.01;
+                      loss_function: loss_functions_type := nntk.loss_functions.mse;
                       dropout_probability: single := 0.0; 
                       batch_size: uint64 := 1);
       begin
         if train_input_data.Count <> train_output_data.Count then
           raise new System.ArgumentException('Размеры обучающей выборки для входных и выходных данных должны совпадать');
         global_alpha := alpha;
+        self.loss_function := loss_function;
         if (0 > dropout_probability) or (dropout_probability >= 1) then
           raise new System.ArgumentException('Вероятность прореживания узлов нейронной сети должна принадлежать [0, 1)');
         global_dropout_probability := dropout_probability;       
@@ -700,6 +662,7 @@ type
                       const test_output_data: array of Vector;
                       const number_of_epoch: uint64;
                       alpha: single := 0.01;
+                      loss_function: loss_functions_type := nntk.loss_functions.mse;
                       dropout_probability: single := 0.0;
                       batch_size: uint64 := 1);
                       
@@ -707,6 +670,7 @@ type
         if train_input_data.Length <> train_output_data.Length then
           raise new System.ArgumentException('Размеры обучающей выборки для входных и выходных данных должны совпадать');
         global_alpha := alpha;
+        self.loss_function := loss_function;
         if (0 > dropout_probability) or (dropout_probability >= 1) then
           raise new System.ArgumentException('Вероятность прореживания узлов нейронной сети должна принадлежать [0, 1)');
         global_dropout_probability := dropout_probability;       
