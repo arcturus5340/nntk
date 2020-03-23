@@ -11,115 +11,205 @@ type
   functions_type = function(const input: Vector): Vector;
 
   // ********** Раздел функций активации и их производных **********
-  Functions = class
-    public
-      /// Возвращает вектор, к каждому члену которого применена функция активации Линейный выпрямитель
-      static function relu(const input: Vector): Vector;
+  functions = class
+    private
+      /// Возвращает вектор, к каждому члену которого применена функции активации Арктангенс
+      static function __arctan(const input: single): single;
       begin
-        result := new Vector;
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          if input[index] > 0 then
-            result[index] := input[index]
-          else 
-            result[index] := 0;
+        result := System.Math.Atan(input);
       end;
       
-      /// Возвращает вектор, к каждому члену которого применена производная функции активации Линейный выпрямитель
-      static function relu_derivative(const input: Vector): Vector;
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Арктангенс
+      static function __arctan_derivative(const input: single): single;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          if input[index] > 0 then
-            result[index] := 1
-          else
-            result[index] := 0;
+        result := 1/(input**2 + 1);
       end;
-    
+      
+      /// Возвращает вектор, к каждому члену которого применена функция активации Ареасинус
+      static function __arsinh(const input: single): single;
+      begin
+        result := ln(input + sqrt(input**2 + 1));
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Ареасинус
+      static function __arsinh_derivative(const input: single): single;
+      begin
+        result := 1/sqrt(input**2 + 1);
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена Выгнутая тождественная функция активации
+      static function __bent_identity(const input: single): single;
+      begin
+        result := (sqr(input**2+1)-1)/2 + input;
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена производная Выгнутой тождественной функции активации
+      static function __bent_identity_derivative(const input: single): single;
+      begin
+        result := input/(2*sqr(input**2+1))+1;
+      end;
+ 
+      /// Возвращает вектор, к каждому члену которого применена функция активации Хевисайда
+      static function __binary_step(const input: single): single;
+      begin
+        if input < 0 then
+          result := 0
+        else
+          result := 1;
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Хевисайда
+      static function __binary_step_derivative(const input: single): single;
+      begin
+        if input <> 0 then
+          result := 0
+        else
+          result := System.Double.NaN;
+      end;
+
       /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
-      static function identity(const input: Vector): Vector;
+      static function __identity(const input: single): single;
       begin
         result := input
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная Тождественной функции активации
-      static function identity_derivative(const input: Vector): Vector;
+      static function __identity_derivative(const input: single): single;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := 1
+        result := 1
       end;
-        
-      /// Возвращает вектор, к каждому члену которого применена функция активации Хевисайда
-      static function binary_step(const input: Vector): Vector;
+                  
+      /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
+      static function __gaussian(const input: single): single;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          if input[index] > 0.5 then
-            result[index] := 1
-          else
-            result[index] := 0;
+        result := exp(-(input**2));
       end;
       
-      /// Возвращает вектор, к каждому члену которого применена производная функции активации Хевисайда
-      static function binary_step_derivative(const input: Vector): Vector;
+      /// Возвращает вектор, к каждому члену которого применена производная Гауссовой функции активации
+      static function __gaussian_derivative(const input: single): single;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          if input[index] <> 0 then
-            result[index] := 0
-          else
-            result[index] := System.Double.NaN;
+        result := -2*input*exp(-(input**2));
+      end;
+               
+      /// Возвращает вектор, к каждому члену которого применена функция активации Линейный выпрямитель
+      static function __relu(const input: single): single;
+      begin
+        if input > 0 then
+          result := input
+        else 
+          result := 0;
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Линейный выпрямитель
+      static function __relu_derivative(const input: single): single;
+      begin
+        if input > 0 then
+          result := 1
+        else
+          result := 0;
       end;
       
       /// Возвращает вектор, к каждому члену которого применена функция активации Сигмоида
-      static function sigmoid(const input: Vector): Vector;
+      static function __sigmoid(const input: single): single;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := 1/(1+exp(-input[index]))
+        result := 1/(1+exp(-input))
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Сигмоида
-      static function sigmoid_derivative(const input: Vector): Vector;
+      static function __sigmoid_derivative(const input: single): single;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := 1/(1+exp(-input[index]))*(1-1/(1+exp(-input[index])));
+        result := 1/(1+exp(-input))*(1-1/(1+exp(-input)));
       end;
-    
-      /// Возвращает вектор, к каждому члену которого применена функции активации Гиперболический тангенс
-      static function tanh(const input: Vector): Vector;
+                  
+      /// Возвращает вектор, к каждому члену которого применена функция активации Кардинальный синус
+      static function __sinc(const input: single): single;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := System.Math.Tanh(input[index]);
+        if input = 0 then
+          result := 1
+        else
+          result := sin(input)/input;
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Кардинальный синус
+      static function __sinc_derivative(const input: single): single;
+      begin
+        if input = 0 then
+          result := 0
+        else
+          result := cos(input)/input - sin(input)/input**2;
+      end;
+   
+      /// Возвращает вектор, к каждому члену которого применена функция активации Синусода
+      static function __sinusoid(const input: single): single;
+      begin
+        result := sin(input);
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Синусода
+      static function __sinusoid_derivative(const input: single): single;
+      begin
+        result := cos(input);
+      end;
+
+      /// Возвращает вектор, к каждому члену которого применена функция активации Softplus
+      static function __softplus(const input: single): single;
+      begin
+        result := ln(1+exp(input));
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Softplus
+      static function __softplus_derivative(const input: single): single;
+      begin
+        result := 1/(1+exp(-input));
+      end;
+                          
+      /// Возвращает вектор, к каждому члену которого применена функция активации Softsign
+      static function __softsign(const input: single): single;
+      begin
+        result := input/(1+abs(input));
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Softsign
+      static function __softsign_derivative(const input: single): single;
+      begin
+        result := 1/(1+abs(input))**2;
+      end;
+ 
+      /// Возвращает вектор, к каждому члену которого применена Квадратная радиальная базисная функция активации
+      static function __sqrbf(const input: single): single;
+      begin
+        if abs(input) < 1 then
+          result := 1 - input**2/2
+        else if abs(input) > 2 then
+          result := 0
+        else
+          result := (2-abs(input))**2/2;
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена производная Квадратной радиальной базисной функции активации
+      static function __sqrbf_derivative(const input: single): single;
+      begin
+        if abs(input) < 1 then
+          result := -input
+        else if abs(input) > 2 then
+          result := 0
+        else
+          result := input - 2*sign(input);
+      end;
+
+      /// Возвращает вектор, к каждому члену которого применена функции активации Гиперболический тангенс
+      static function __tanh(const input: single): single;
+      begin
+        result := System.Math.Tanh(input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Гиперболический тангенс
-      static function tanh_derivative(const input: Vector): Vector;
+      static function __tanh_derivative(const input: single): single;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := 1-System.Math.Tanh(input[index])**2;
+        result := 1-System.Math.Tanh(input)**2;
       end;
-      
+
+    public
       /// Возвращает вектор, к каждому члену которого применена функции активации Арктангенс
       static function arctan(const input: Vector): Vector;
       begin
@@ -127,7 +217,7 @@ type
         result.set_size(input.size);
         {$omp parallel for}
         for var index := 0 to input.size-1 do
-          result[index] := System.Math.Atan(input[index]);
+          result[index] := __arctan(input[index]);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Арктангенс
@@ -137,7 +227,7 @@ type
         result.set_size(input.size);
         {$omp parallel for}
         for var index := 0 to input.size-1 do
-          result[index] := 1/(input[index]**2 + 1);
+          result[index] := __arctan_derivative(input[index]);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена функция активации Ареасинус
@@ -147,7 +237,7 @@ type
         result.set_size(input.size);
         {$omp parallel for}
         for var index := 0 to input.size-1 do
-          result[index] := ln(input[index] + sqrt(input[index]**2 + 1));
+          result[index] := __arsinh(input[index]);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Ареасинус
@@ -157,29 +247,49 @@ type
         result.set_size(input.size);
         {$omp parallel for}
         for var index := 0 to input.size-1 do
-          result[index] := 1/sqrt(input[index]**2 + 1);
-      end;
-            
-      /// Возвращает вектор, к каждому члену которого применена функция активации Softsign
-      static function softsign(const input: Vector): Vector;
-      begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := input[index]/(1+abs(input[index]));
+          result[index] := __arsinh_derivative(input[index]);
       end;
       
-      /// Возвращает вектор, к каждому члену которого применена производная функции активации Softsign
-      static function softsign_derivative(const input: Vector): Vector;
+      /// Возвращает вектор, к каждому члену которого применена Выгнутая тождественная функция активации
+      static function bent_identity(const input: Vector): Vector;
       begin
         result := new Vector;
         result.set_size(input.size);
         {$omp parallel for}
         for var index := 0 to input.size-1 do
-          result[index] := 1/(1+abs(input[index]))**2;
+          result[index] := __bent_identity(input[index]);
       end;
-            
+      
+      /// Возвращает вектор, к каждому члену которого применена производная Выгнутой тождественной функции активации
+      static function bent_identity_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __bent_identity_derivative(input[index]);
+      end;
+ 
+      /// Возвращает вектор, к каждому члену которого применена функция активации Хевисайда
+      static function binary_step(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __binary_step(input[index]);
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Хевисайда
+      static function binary_step_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __binary_step_derivative(input[index]);
+      end;
+
       /// Возвращает вектор, к каждому члену которого применена функция активации Биполярный линейный выпрямитель
       static function brelu(const input: Vector): Vector;
       begin
@@ -188,9 +298,9 @@ type
         {$omp parallel for}
         for var index := 0 to input.size-1 do
           if index mod 2 = 0 then
-            result[index] := input[index]>0? input[index]: 0
+            result[index] := __relu(input[index])
           else
-            result[index] := -(-input[index]>0? input[index]: 0);
+            result[index] := -__relu(input[index]);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Биполярный линейный выпрямитель
@@ -201,91 +311,31 @@ type
         {$omp parallel for}
         for var index := 0 to input.size-1 do
           if index mod 2 = 0 then
-            result[index] := input[index]>0? 1: 0
+            result[index] := __relu_derivative(input[index])
           else
-            result[index] := -input[index]>0? 1: 0;
+            result[index] := __relu_derivative(-input[index]);
+      end;
+              
+      /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
+      static function identity(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __identity(input[index]);
       end;
       
-      /// Возвращает вектор, к каждому члену которого применена функция активации Softplus
-      static function softplus(const input: Vector): Vector;
+      /// Возвращает вектор, к каждому члену которого применена производная Тождественной функции активации
+      static function identity_derivative(const input: Vector): Vector;
       begin
         result := new Vector;
         result.set_size(input.size);
         {$omp parallel for}
         for var index := 0 to input.size-1 do
-          result[index] := ln(1+exp(input[index]));
+          result[index] := __identity_derivative(input[index]);
       end;
-      
-      /// Возвращает вектор, к каждому члену которого применена производная функции активации Softplus
-      static function softplus_derivative(const input: Vector): Vector;
-      begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := 1/(1+exp(-input[index]));
-      end;
-            
-      /// Возвращает вектор, к каждому члену которого применена Выгнутая тождественная функция активации
-      static function bent_identity(const input: Vector): Vector;
-      begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := (sqr(input[index]**2+1)-1)/2 + input[index];
-      end;
-      
-      /// Возвращает вектор, к каждому члену которого применена производная Выгнутой тождественной функции активации
-      static function bent_identity_derivative(const input: Vector): Vector;
-      begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := input[index]/(2*sqr(input[index]**2+1))+1;
-      end;
-      
-      /// Возвращает вектор, к каждому члену которого применена функция активации Синусода
-      static function sinusoid(const input: Vector): Vector;
-      begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := sin(input[index]);
-      end;
-      
-      /// Возвращает вектор, к каждому члену которого применена производная функции активации Синусода
-      static function sinusoid_derivative(const input: Vector): Vector;
-      begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := cos(input[index]);
-      end;
-      
-      /// Возвращает вектор, к каждому члену которого применена функция активации Кардинальный синус
-      static function sinc(const input: Vector): Vector;
-      begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := input[index]=0? 1: sin(input[index])/input[index];
-      end;
-      
-      /// Возвращает вектор, к каждому члену которого применена производная функции активации Кардинальный синус
-      static function sinc_derivative(const input: Vector): Vector;
-      begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := input[index]=0? 0: cos(input[index])/input[index] - sin(input[index])/input[index]**2;
-      end;
-            
+                  
       /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
       static function gaussian(const input: Vector): Vector;
       begin
@@ -293,7 +343,7 @@ type
         result.set_size(input.size);
         {$omp parallel for}
         for var index := 0 to input.size-1 do
-          result[index] := exp(-(input[index]**2));
+          result[index] := __gaussian(input[index]);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная Гауссовой функции активации
@@ -303,39 +353,88 @@ type
         result.set_size(input.size);
         {$omp parallel for}
         for var index := 0 to input.size-1 do
-          result[index] := -2*input[index]*exp(-(input[index]**2));
+          result[index] := __gaussian_derivative(input[index]);
+      end;
+               
+      /// Возвращает вектор, к каждому члену которого применена функция активации Линейный выпрямитель
+      static function relu(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __relu(input[index]);
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Линейный выпрямитель
+      static function relu_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __relu_derivative(input[index]);
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена функция активации Сигмоида
+      static function sigmoid(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __sigmoid(input[index]);
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Сигмоида
+      static function sigmoid_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __sigmoid_derivative(input[index]);
       end;
                   
-      /// Возвращает вектор, к каждому члену которого применена Квадратная радиальная базисная функция активации
-      static function sqrbf(const input: Vector): Vector;
+      /// Возвращает вектор, к каждому члену которого применена функция активации Кардинальный синус
+      static function sinc(const input: Vector): Vector;
       begin
         result := new Vector;
         result.set_size(input.size);
         {$omp parallel for}
         for var index := 0 to input.size-1 do
-          if abs(input[index]) < 1 then
-            result[index] := 1 - input[index]**2/2
-          else if abs(input[index]) > 2 then
-            result[index] := 0
-          else
-            result[index] := (2-abs(input[index]))**2/2;
+          result[index] := __sinc(input[index]);
       end;
       
-      /// Возвращает вектор, к каждому члену которого применена производная Квадратной радиальной базисной функции активации
-      static function sqrbf_derivative(const input: Vector): Vector;
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Кардинальный синус
+      static function sinc_derivative(const input: Vector): Vector;
       begin
         result := new Vector;
         result.set_size(input.size);
         {$omp parallel for}
         for var index := 0 to input.size-1 do
-          if abs(input[index]) < 1 then
-            result[index] := -input[index]
-          else if abs(input[index]) > 2 then
-            result[index] := 0
-          else
-            result[index] := input[index] - 2*sign(input[index]);
+          result[index] := __sinc_derivative(input[index]);
+      end;
+   
+      /// Возвращает вектор, к каждому члену которого применена функция активации Синусода
+      static function sinusoid(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __sinusoid(input[index]);
       end;
       
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Синусода
+      static function sinusoid_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __sinusoid_derivative(input[index]);
+      end;
+            
       /// Возвращает вектор, к каждому члену которого применена функция активации Softmax
       static function softmax(const input: Vector): Vector;
       begin
@@ -356,12 +455,97 @@ type
         for var index := 0 to input.size-1 do
           result[index] := result[index]*(1-result[index]);
       end;
+
+      /// Возвращает вектор, к каждому члену которого применена функция активации Softplus
+      static function softplus(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __softplus(input[index]);
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Softplus
+      static function softplus_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __softplus_derivative(input[index]);
+      end;
+                          
+      /// Возвращает вектор, к каждому члену которого применена функция активации Softsign
+      static function softsign(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __softsign(input[index]);
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Softsign
+      static function softsign_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __softsign_derivative(input[index]);
+      end;
+ 
+      /// Возвращает вектор, к каждому члену которого применена Квадратная радиальная базисная функция активации
+      static function sqrbf(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __sqrbf(input[index]);
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена производная Квадратной радиальной базисной функции активации
+      static function sqrbf_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __sqrbf_derivative(input[index]);
+      end;
+
+      /// Возвращает вектор, к каждому члену которого применена функции активации Гиперболический тангенс
+      static function tanh(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __tanh(input[index]);
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Гиперболический тангенс
+      static function tanh_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __tanh_derivative(input[index]);
+      end;
   end;
   
   loss_functions_type = function(const true_answer, received_answer: Vector): real;
 
   loss_functions = class
     public
+      static function arctan(const true_answer, received_answer: Vector): real;
+      begin
+        result := ((true_answer-received_answer)**2).sum()/received_answer.size()
+      end;
+    
       static function mse(const true_answer, received_answer: Vector): real;
       begin
         result := ((true_answer-received_answer)**2).sum()/received_answer.size();
@@ -372,10 +556,6 @@ type
         result := System.Math.Sqrt(((true_answer-received_answer)**2).sum()/received_answer.size());
       end;
 
-      static function arctan(const true_answer, received_answer: Vector): real;
-      begin
-        result := ((true_answer-received_answer)**2).sum()/received_answer.size()
-      end;
   end;
 
   Neuron = class
