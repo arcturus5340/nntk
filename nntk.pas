@@ -12,7 +12,30 @@ type
 
   // ********** Раздел функций активации и их производных **********
   functions = class
-    private
+    private   
+      static elu_alpha: single;
+      static elu_derivative_alpha: single;       
+      static isru_alpha: single;
+      static isru_derivative_alpha: single;      
+      static isrlu_alpha: single;
+      static isrlu_derivative_alpha: single;
+      static plu_alpha: single;
+      static plu_c: single;
+      static plu_derivative_alpha: single;
+      static plu_derivative_c: single;
+      static prelu_alpha: single;
+      static prelu_derivative_alpha: single;
+      static softexponential_alpha: single;
+      static softexponential_derivative_alpha: single;
+      static srelu_al: single;
+      static srelu_ar: single;
+      static srelu_tl: single;
+      static srelu_tr: single;
+      static srelu_derivative_al: single;
+      static srelu_derivative_ar: single;
+      static srelu_derivative_tl: single;
+      static srelu_derivative_tr: single;      
+      
       /// Возвращает вектор, к каждому члену которого применена функции активации Арктангенс
       static function __arctan(const input: single): single;
       begin
@@ -66,7 +89,35 @@ type
         else
           result := System.Double.NaN;
       end;
-
+      
+      static function __elu(const input: single): single;
+      begin
+        if input > 0 then
+          result := input
+        else
+          result := elu_alpha*(exp(input)-1)
+      end;
+ 
+      static function __elu_derivative(const input: single): single;
+      begin
+        if input > 0 then
+          result := 1
+        else
+          result :=  elu_derivative_alpha*(exp(input)-1)+elu_derivative_alpha;
+      end;
+            
+      /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
+      static function __gaussian(const input: single): single;
+      begin
+        result := exp(-(input**2));
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена производная Гауссовой функции активации
+      static function __gaussian_derivative(const input: single): single;
+      begin
+        result := -2*input*exp(-(input**2));
+      end;
+      
       /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
       static function __identity(const input: single): single;
       begin
@@ -79,18 +130,61 @@ type
         result := 1
       end;
                   
-      /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
-      static function __gaussian(const input: single): single;
+      static function __isru(const input: single): single;
       begin
-        result := exp(-(input**2));
+        result := input/sqrt(1 + isru_alpha*input**2);
+      end;
+ 
+      static function __isru_derivative(const input: single): single;
+      begin
+        result := (1/sqrt(1 + isru_derivative_alpha*input**2))**3;
       end;
       
-      /// Возвращает вектор, к каждому члену которого применена производная Гауссовой функции активации
-      static function __gaussian_derivative(const input: single): single;
+      static function __isrlu(const input: single): single;
       begin
-        result := -2*input*exp(-(input**2));
+        if input < 0 then
+          result := input/sqrt(1 + isrlu_alpha*input**2)
+        else
+          result := input
       end;
-               
+ 
+      static function __isrlu_derivative(const input: single): single;
+      begin
+        if input < 0 then
+          result := (1/sqrt(1 + isrlu_derivative_alpha*input**2))**3
+        else
+          result := 1;
+      end;
+
+      static function __plu(const input: single): single;
+      begin
+        result := max(plu_alpha*(input+plu_c)-plu_c, min(plu_alpha*(input-plu_c)+plu_c, input));
+      end;
+ 
+      static function __plu_derivative(const input: single): single;
+      begin
+        if abs(input) > plu_derivative_c then
+          result := plu_derivative_alpha
+        else
+          result := 1;
+      end;               
+
+      static function __prelu(const input: single): single;
+      begin
+        if input < 0 then
+          result := prelu_alpha*input
+        else
+          result := input
+      end;
+ 
+      static function __prelu_derivative(const input: single): single;
+      begin
+        if input < 0 then
+          result := prelu_derivative_alpha
+        else
+          result := 1;
+      end;               
+      
       /// Возвращает вектор, к каждому члену которого применена функция активации Линейный выпрямитель
       static function __relu(const input: single): single;
       begin
@@ -150,6 +244,26 @@ type
       begin
         result := cos(input);
       end;
+      
+      /// Возвращает вектор, к каждому члену которого применена функция активации Softplus
+      static function __softexponential(const input: single): single;
+      begin
+        if softexponential_alpha < 0 then
+          result := -ln(1-softexponential_alpha*(input+softexponential_alpha))/softexponential_alpha
+        else if softexponential_alpha > 0 then 
+          result := (exp(softexponential_alpha*input)-1)/softexponential_alpha+softexponential_alpha
+        else
+          result := input
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Softplus
+      static function __softexponential_derivative(const input: single): single;
+      begin
+        if softexponential_derivative_alpha < 0 then
+          result := 1/(1 - softexponential_derivative_alpha*(softexponential_derivative_alpha+input))
+        else
+          result := exp(softexponential_derivative_alpha*input);
+      end;
 
       /// Возвращает вектор, к каждому члену которого применена функция активации Softplus
       static function __softplus(const input: single): single;
@@ -196,7 +310,28 @@ type
         else
           result := input - 2*sign(input);
       end;
-
+      /// Возвращает вектор, к каждому члену которого применена функция активации Линейный выпрямитель
+      static function __srelu(const input: single): single;
+      begin
+      if input <= srelu_tl then
+        result := srelu_tl + srelu_al*(input - srelu_tl)
+      else if input >= srelu_tr then 
+        result := srelu_tr + srelu_ar*(input - srelu_tr)
+      else
+        result := input; 
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена производная функции активации Линейный выпрямитель
+      static function __srelu_derivative(const input: single): single;
+      begin
+        if input <= srelu_derivative_tl then
+          result := srelu_derivative_al
+        else if input >= srelu_derivative_tr then
+          result := srelu_derivative_ar
+        else
+          result := 1
+      end;
+      
       /// Возвращает вектор, к каждому члену которого применена функции активации Гиперболический тангенс
       static function __tanh(const input: single): single;
       begin
@@ -315,7 +450,61 @@ type
           else
             result[index] := __relu_derivative(-input[index]);
       end;
-              
+
+      /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
+      static function elu(const alpha: single): function(const input: Vector):Vector;
+      begin
+        functions.elu_alpha := alpha;
+        result := _elu;
+      end;
+
+      /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
+      static function _elu(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __elu(input[index]);
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
+      static function elu_derivative(const alpha: single): function(const input: Vector):Vector;
+      begin
+        functions.elu_derivative_alpha := alpha;
+        result := _elu_derivative;
+      end;
+
+      /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
+      static function _elu_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __elu_derivative(input[index]);
+      end;
+      
+
+      static function gaussian(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __gaussian(input[index]);
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена производная Гауссовой функции активации
+      static function gaussian_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __gaussian_derivative(input[index]);
+      end;
+      
       /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
       static function identity(const input: Vector): Vector;
       begin
@@ -335,27 +524,145 @@ type
         for var index := 0 to input.size-1 do
           result[index] := __identity_derivative(input[index]);
       end;
-                  
+      
+      /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
+      static function isru(const alpha: single): function(const input: Vector):Vector;
+      begin
+        functions.isru_alpha := alpha;
+        result := _isru;
+      end;
+
       /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
-      static function gaussian(const input: Vector): Vector;
+      static function _isru(const input: Vector): Vector;
       begin
         result := new Vector;
         result.set_size(input.size);
         {$omp parallel for}
         for var index := 0 to input.size-1 do
-          result[index] := __gaussian(input[index]);
+          result[index] := __isru(input[index]);
       end;
       
-      /// Возвращает вектор, к каждому члену которого применена производная Гауссовой функции активации
-      static function gaussian_derivative(const input: Vector): Vector;
+      /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
+      static function isru_derivative(const alpha: single): function(const input: Vector):Vector;
+      begin
+        functions.isru_derivative_alpha := alpha;
+        result := _isru_derivative;
+      end;
+
+      /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
+      static function _isru_derivative(const input: Vector): Vector;
       begin
         result := new Vector;
         result.set_size(input.size);
         {$omp parallel for}
         for var index := 0 to input.size-1 do
-          result[index] := __gaussian_derivative(input[index]);
+          result[index] := __isru_derivative(input[index]);
       end;
-               
+      
+      /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
+      static function isrlu(const alpha: single): function(const input: Vector):Vector;
+      begin
+        functions.isrlu_alpha := alpha;
+        result := _isrlu;
+      end;
+
+      /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
+      static function _isrlu(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __isrlu(input[index]);
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
+      static function isrlu_derivative(const alpha: single): function(const input: Vector):Vector;
+      begin
+        functions.isrlu_derivative_alpha := alpha;
+        result := _isrlu_derivative;
+      end;
+
+      /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
+      static function _isrlu_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __isrlu_derivative(input[index]);
+      end;
+              
+      /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
+      static function plu(const alpha, c: single): function(const input: Vector):Vector;
+      begin
+        functions.plu_alpha := alpha;
+        functions.plu_c := c;
+        result := _plu;
+      end;
+
+      /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
+      static function _plu(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __plu(input[index]);
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
+      static function plu_derivative(const alpha, c: single): function(const input: Vector):Vector;
+      begin
+        functions.plu_derivative_alpha := alpha;
+        functions.plu_derivative_c := c;
+        result := _plu_derivative;
+      end;
+
+      /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
+      static function _plu_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __plu_derivative(input[index]);
+      end;         
+           
+      /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
+      static function prelu(const alpha: single): function(const input: Vector):Vector;
+      begin
+        functions.prelu_alpha := alpha;
+        result := _prelu;
+      end;
+
+      /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
+      static function _prelu(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __prelu(input[index]);
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
+      static function prelu_derivative(const alpha: single): function(const input: Vector):Vector;
+      begin
+        functions.prelu_derivative_alpha := alpha;
+        result := _prelu_derivative;
+      end;
+
+      /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
+      static function _prelu_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __prelu_derivative(input[index]);
+      end;            
+           
       /// Возвращает вектор, к каждому члену которого применена функция активации Линейный выпрямитель
       static function relu(const input: Vector): Vector;
       begin
@@ -434,7 +741,41 @@ type
         for var index := 0 to input.size-1 do
           result[index] := __sinusoid_derivative(input[index]);
       end;
-            
+                       
+      /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
+      static function softexponential(const alpha: single): function(const input: Vector):Vector;
+      begin
+        functions.softexponential_alpha := alpha;
+        result := _softexponential;
+      end;
+
+      /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
+      static function _softexponential(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __softexponential(input[index]);
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
+      static function softexponential_derivative(const alpha: single): function(const input: Vector):Vector;
+      begin
+        functions.softexponential_derivative_alpha := alpha;
+        result := _softexponential_derivative;
+      end;
+
+      /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
+      static function _softexponential_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __softexponential_derivative(input[index]);
+      end;            
+           
       /// Возвращает вектор, к каждому члену которого применена функция активации Softmax
       static function softmax(const input: Vector): Vector;
       begin
@@ -515,6 +856,46 @@ type
         for var index := 0 to input.size-1 do
           result[index] := __sqrbf_derivative(input[index]);
       end;
+      
+      /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
+      static function srelu(const al, ar, tl, tr: single): function(const input: Vector):Vector;
+      begin
+        functions.srelu_al := al;
+        functions.srelu_ar := ar;
+        functions.srelu_tl := tl;
+        functions.srelu_tr := tr;
+        result := _srelu;
+      end;
+
+      /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
+      static function _srelu(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __srelu(input[index]);
+      end;
+      
+      /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
+      static function srelu_derivative(const al, ar, tl, tr: single): function(const input: Vector):Vector;
+      begin
+        functions.srelu_derivative_al := al;
+        functions.srelu_derivative_ar := ar;
+        functions.srelu_derivative_tl := tl;
+        functions.srelu_derivative_tr := tr;
+        result := _srelu_derivative;
+      end;
+
+      /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
+      static function _srelu_derivative(const input: Vector): Vector;
+      begin
+        result := new Vector;
+        result.set_size(input.size);
+        {$omp parallel for}
+        for var index := 0 to input.size-1 do
+          result[index] := __srelu_derivative(input[index]);
+      end;  
 
       /// Возвращает вектор, к каждому члену которого применена функции активации Гиперболический тангенс
       static function tanh(const input: Vector): Vector;
