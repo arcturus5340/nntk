@@ -11,14 +11,15 @@ var
   INITIALIZING_WEIGHTS_RANGE: System.Tuple<real, real> := (-10.0, 10.0);
   ACTIVATION_FUNCTIONS: array of nntk.functions_type := 
   (
-    nntk.functions.tanh,
+    nntk.functions.isru(5),
     nntk.functions.tanh
   );
   ACTIVATION_FUNCTIONS_DERIVATIVES: array of nntk.functions_type := 
   (
-    nntk.functions.tanh_derivative, 
+    nntk.functions.isru_derivative(5), 
     nntk.functions.tanh_derivative
   );
+  LOSS_FUNCTION: nntk.loss_functions_type := nntk.loss_functions.arctan;
 
 
 begin
@@ -42,6 +43,7 @@ begin
   nn.train(ipt, opt, ipt, opt, 
            EPOCHS_COUNT, 
            LEARNING_RATE, 
+           LOSS_FUNCTION,
            DROPOUT_PROBABILITY,
            BATCH_SIZE);
            

@@ -13,7 +13,7 @@ var
   (nntk.functions.tanh, nntk.functions.softmax);
   ACTIVATION_FUNCTIONS_DERIVATIVES: array of nntk.functions_type := 
   (nntk.functions.tanh_derivative, nntk.functions.softmax_derivative);
-
+  LOSS_FUNCTION := nntk.loss_functions.mse;
 begin
   var ipt := new List<Vector>;
   foreach var str in ReadallLines('images.txt') do
@@ -58,6 +58,7 @@ begin
   nn.train(ipt, opt, test_ipt, test_opt,
            EPOCHS_COUNT, 
            LEARNING_RATE, 
+           LOSS_FUNCTION,
            DROPOUT_PROBABILITY,
            BATCH_SIZE);
            
