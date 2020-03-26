@@ -1,6 +1,6 @@
 ﻿/// Модуль для создания и обучений ИНС
 unit nntk;
-uses vector_math;
+uses vector_math, neo;
 
 var 
   global_alpha: single;
@@ -1179,37 +1179,7 @@ type
           self.neural_network[index-1] := new Layer(trunc(neural_network_topology[index]),
                                                   trunc(neural_network_topology[index-1]));
         end;
-        
-      /// Обучает нейронную сеть на входных данных input_data и выходных данных output_data number_of_epoch эпох
-      /// Необязательные параметры:
-      /// Коэффициент обучаемости alpha (по умолчанию 0.01)
-      /// Массив функций активации для разных слоев ИНС activation_functions (по умолчанию nntk.functions.relu) 
-      /// Массив производных фукций активации для разных слоев ИНС activation_function_derivatives (по умолчанию nntk.functions.relu_derivative)
-      /// Вероятность прореживания dropout_probability (по умолчанию 0.0 - Прореживание не проводится)
-      /// Размер пакета разности весов batch_size (по умолчанию 1 - Обучение происходит на каждом отдельном примере)
-      procedure train(const train_input_data: List<Vector>; 
-                      const train_output_data: List<Vector>;
-                      const test_input_data: List<Vector>;
-                      const test_output_data: List<Vector>;
-                      const number_of_epoch: uint64;
-                      alpha: single := 0.01;
-                      loss_function: loss_functions_type := nntk.loss_functions.mse;
-                      dropout_probability: single := 0.0; 
-                      batch_size: uint64 := 1);
-      begin
-        if train_input_data.Count <> train_output_data.Count then
-          raise new System.ArgumentException('Размеры обучающей выборки для входных и выходных данных должны совпадать');
-        global_alpha := alpha;
-        self.loss_function := loss_function;
-        if (0 > dropout_probability) or (dropout_probability >= 1) then
-          raise new System.ArgumentException('Вероятность прореживания узлов нейронной сети должна принадлежать [0, 1)');
-        global_dropout_probability := dropout_probability;       
-        if batch_size < 1 then
-          raise new System.ArgumentException('Размер пакетов разности весов должен быть больше нуля');
-        self.batch_size := batch_size;
-        __train(train_input_data, train_output_data, test_input_data, test_output_data, number_of_epoch);  
-      end;
-      
+ 
       /// Обучает нейронную сеть на входных данных input_data и выходных данных output_data number_of_epoch эпох
       /// Необязательные параметры:
       /// Коэффициент обучаемости alpha (по умолчанию 0.01)
@@ -1274,4 +1244,97 @@ type
           result[index] := random() < global_dropout_probability? 0: 1;
       end;
   end;
+  
+  Tensor = class
+    private
+      static id_counter := 0;
+      id: integer;
+      data: neo.neo_array;
+      autograde: boolean;
+      creators: array of Tensor := nil;
+      creation_op: string;
+      grad: Tensor := nil;
+      children: Dictionary<integer, integer>;
+      
+    public
+      constructor Create(data: neo.neo_array; 
+                         autograde: boolean := False;
+                         creators: array of Tensor := nil; 
+                         creation_op: string := nil;
+                         id: integer := -1);
+      begin
+        self.data := data;
+        self.autograde := autograde;
+        self.creators := creators;
+        self.creation_op := creation_op;
+        self.children := new Dictionary<integer, integer>;
+        
+        if id = -1 then
+          begin
+          self.id := id_counter;
+          id_counter += 1;
+          end;
+        if self.creators <> nil then
+          for var index := 0 to self.creators.Length-1 do
+            if self.creators[index].children.ContainsKey(self.id) then
+              self.creators[index].children[self.id] += 1
+            else
+              self.creators[index].children[self.id] := 1
+      end;
+      
+      procedure backward(grad: Tensor := nil; grad_origin: Tensor := nil);
+      begin
+        if self.autograde then
+        begin
+          if grad_origin <> nil then
+            if self.children[grad_origin.id] = 0 then
+              println('cannot backprop more than once')
+            else
+              self.children[grad_origin.id] -= 1;
+          if self.grad <> nil then
+            self.grad += grad
+          else 
+            self.grad := grad;
+          if (self.creators <> nil) and ((self.children.Values.All(x->x=0)) or (grad_origin = nil)) then
+            if self.creation_op = 'add' then
+            begin
+              self.creators[0].backward(grad, self);
+              self.creators[1].backward(grad, self);
+            end;
+        end;
+      end;
+      
+      static function operator+(self_tensor, other_tensor: Tensor): tensor;
+      begin
+        if self_tensor.autograde and other_tensor.autograde then
+        begin
+          var tmp_creators: array of Tensor := (self_tensor, other_tensor);
+          result := new Tensor(self_tensor.data + other_tensor.data, True, tmp_creators, 'add');
+        end
+        else
+          result := new Tensor(self_tensor.data + other_tensor.data);
+      end;
+      static procedure operator+=(var self_tensor, other_tensor: Tensor);
+      begin
+        self_tensor := self_tensor + other_tensor;
+      end;
+      
+      function ToString: string; override;
+      begin
+        result += self.data.ToString + ': ';
+        for var index := 0 to self.data.value.Length-2 do
+          result += self.data.value[0, index] + ', ';
+        result += self.data.value[0, self.data.value.Length-1].ToString + ' (';
+
+        if self.creators <> nil then
+          for var index := 0 to self.creators.Length-1 do
+            result += self.creators[index].ToString + ', ';
+        result += ')('+self.creation_op+')(';
+        if self.grad <> nil then
+          for var index := 0 to self.grad.data.value.Length-1 do
+            result += self.grad.data.value[0, index].ToString + ', ';
+        result += ')';
+      end;
+  end;
+  
 end.
