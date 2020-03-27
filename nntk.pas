@@ -1247,16 +1247,17 @@ type
   
   Tensor = class
     private
-      static id_counter := 0;
       id: integer;
+      static id_counter := 0;
       data: neo.neo_array;
       autograde: boolean;
-      creators: array of Tensor := nil;
       creation_op: string;
       grad: Tensor := nil;
-      children: Dictionary<integer, integer>;
       
     public
+      creators: array of Tensor := nil;
+      children: Dictionary<integer, integer>;
+    
       constructor Create(data: neo.neo_array; 
                          autograde: boolean := False;
                          creators: array of Tensor := nil; 
@@ -1274,12 +1275,13 @@ type
           self.id := id_counter;
           id_counter += 1;
           end;
+          
         if self.creators <> nil then
           for var index := 0 to self.creators.Length-1 do
             if self.creators[index].children.ContainsKey(self.id) then
               self.creators[index].children[self.id] += 1
             else
-              self.creators[index].children[self.id] := 1
+              self.creators[index].children[self.id] := 1;
       end;
       
       procedure backward(grad: Tensor := nil; grad_origin: Tensor := nil);
@@ -1300,11 +1302,13 @@ type
             begin
               self.creators[0].backward(grad, self);
               self.creators[1].backward(grad, self);
-            end;
+            end
+            else if self.creation_op = 'neg' then
+              self.creators[0].backward(-grad, self);
         end;
       end;
       
-      static function operator+(self_tensor, other_tensor: Tensor): tensor;
+      static function operator+(self_tensor, other_tensor: Tensor): Tensor;
       begin
         if self_tensor.autograde and other_tensor.autograde then
         begin
@@ -1312,12 +1316,103 @@ type
           result := new Tensor(self_tensor.data + other_tensor.data, True, tmp_creators, 'add');
         end
         else
-          result := new Tensor(self_tensor.data + other_tensor.data);
+          result := new Tensor(self_tensor.data + other_tensor.data, False, nil, 'add');
       end;
       static procedure operator+=(var self_tensor, other_tensor: Tensor);
       begin
         self_tensor := self_tensor + other_tensor;
       end;
+      
+      static function operator-(self_tensor: Tensor): Tensor;
+      begin
+        if self_tensor.autograde then
+        begin
+          var tmp_creator: array of tensor := (self_tensor);
+          result := new Tensor(self_tensor.data * (-1), True, tmp_creator, 'neg')
+        end
+        else
+          result := new Tensor(self_tensor.data * (-1), False, nil, 'neg');
+      end;
+      
+      static function operator-(self_tensor, other_tensor: Tensor): Tensor;
+      begin
+        if self_tensor.autograde and other_tensor.autograde then
+        begin
+          var tmp_creators: array of Tensor := (self_tensor, other_tensor);
+          result := new Tensor(self_tensor.data - other_tensor.data, True, tmp_creators, 'sub');
+        end
+        else
+          result := new Tensor(self_tensor.data - other_tensor.data, False, nil, 'sub');
+      end;
+      static procedure operator-=(var self_tensor, other_tensor: Tensor);
+      begin
+        self_tensor := self_tensor - other_tensor;
+      end;
+      
+      static function operator*(self_tensor, other_tensor: Tensor): Tensor;
+      begin
+        if self_tensor.autograde and other_tensor.autograde then
+        begin
+          var tmp_creators: array of Tensor := (self_tensor, other_tensor);
+          result := new Tensor(self_tensor.data * other_tensor.data, True, tmp_creators, 'mul');
+        end
+        else
+          result := new Tensor(self_tensor.data * other_tensor.data, False, nil, 'mul');
+      end;
+      static procedure operator*=(var self_tensor, other_tensor: Tensor);
+      begin
+        self_tensor := self_tensor * other_tensor;
+      end;
+      
+      function sum(): Tensor;
+      begin
+        var sum_array: array of real := (self.data.sum());
+        if self.autograde then
+        begin
+          var tmp_creator: array of Tensor := (self);
+          result := new Tensor(new neo.neo_array(sum_array), True, tmp_creator, 'sum_0')
+        end
+        else
+          result := new Tensor(new neo.neo_array(sum_array), False, nil, 'sum_0');
+      end;
+      
+//      function expand(dim, copies: integer): Tensor;
+//      begin
+//        var trans_cmd := [0..self.data.shape.length]; 
+//        trans_cmd.insert(dim,len(self.data.shape)); 
+//        var new_shape := list(self.data.shape) + [copies]; 
+//        var new_data := self.data.repeat(copies).reshape(new_shape); 
+//        new_data := new_data.transpose(trans_cmd);
+//        if self.autograd then 
+//        begin
+//          var tmp_creator: array of Tensor := (self);
+//          result := Tensor(new_data, True, tmp_creator, 'expand_'+str(dim));
+//          end
+//        else
+//          result := Tensor(new_data, False, nil, 'expand_'+str(dim));
+//      end;
+      
+//      function transpose(): Tensor; 
+//        begin
+//        if self.autograde then
+//        begin
+//          var tmp_creator: array of Tensor := (self);
+//          result := new Tensor(self.data.transpose(), True, tmp_creator, creation_op='transpose') 
+//          end
+//        else
+//          result := new Tensor(self.data.transpose(), False, nil, 'transpose')
+//        end;
+        
+//      function mm(other_tensor: Tensor): Tensor; 
+//        begin
+//        if self.autograde then
+//          begin
+//          var tmp_creators: array of Tensor := (self, other_tensor);
+//          result := new Tensor(self.data.dot(other_tensor.data), True, tmp_creators, 'mm')
+//          end
+//        else
+//          result := new Tensor(self.data.dot(other_tensor.data), False, nil, 'mm')
+//        end;
       
       function ToString: string; override;
       begin
