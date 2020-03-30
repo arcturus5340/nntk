@@ -1,79 +1,79 @@
 ﻿/// Модуль для создания и обучений ИНС
 unit nntk;
-uses vector_math, neo;
+uses neo;
 
 var 
-  global_alpha: single;
-  global_dropout_probability: single;
+  global_alpha: real;
+  global_dropout_probability: real;
   global_initializing_weights_range: System.Tuple<real, real>;
 
 type   
-  functions_type = function(const input: Vector): Vector;
+  functions_type = function(const input: neo.neo_array): neo.neo_array;
 
   // ********** Раздел функций активации и их производных **********
   functions = class
     private   
-      static elu_alpha: single;
-      static elu_derivative_alpha: single;       
-      static isru_alpha: single;
-      static isru_derivative_alpha: single;      
-      static isrlu_alpha: single;
-      static isrlu_derivative_alpha: single;
-      static plu_alpha: single;
-      static plu_c: single;
-      static plu_derivative_alpha: single;
-      static plu_derivative_c: single;
-      static prelu_alpha: single;
-      static prelu_derivative_alpha: single;
-      static softexponential_alpha: single;
-      static softexponential_derivative_alpha: single;
-      static srelu_al: single;
-      static srelu_ar: single;
-      static srelu_tl: single;
-      static srelu_tr: single;
-      static srelu_derivative_al: single;
-      static srelu_derivative_ar: single;
-      static srelu_derivative_tl: single;
-      static srelu_derivative_tr: single;      
+      static elu_alpha: real;
+      static elu_derivative_alpha: real;       
+      static isru_alpha: real;
+      static isru_derivative_alpha: real;      
+      static isrlu_alpha: real;
+      static isrlu_derivative_alpha: real;
+      static plu_alpha: real;
+      static plu_c: real;
+      static plu_derivative_alpha: real;
+      static plu_derivative_c: real;
+      static prelu_alpha: real;
+      static prelu_derivative_alpha: real;
+      static softexponential_alpha: real;
+      static softexponential_derivative_alpha: real;
+      static srelu_al: real;
+      static srelu_ar: real;
+      static srelu_tl: real;
+      static srelu_tr: real;
+      static srelu_derivative_al: real;
+      static srelu_derivative_ar: real;
+      static srelu_derivative_tl: real;
+      static srelu_derivative_tr: real;      
       
       /// Возвращает вектор, к каждому члену которого применена функции активации Арктангенс
-      static function __arctan(const input: single): single;
+      static function __arctan(const input: real): real;
       begin
         result := System.Math.Atan(input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Арктангенс
-      static function __arctan_derivative(const input: single): single;
+      static function __arctan_derivative(const input: real): real;
       begin
         result := 1/(input**2 + 1);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена функция активации Ареасинус
-      static function __arsinh(const input: single): single;
+      static function __arsinh(const input: real): real;
       begin
         result := ln(input + sqrt(input**2 + 1));
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Ареасинус
-      static function __arsinh_derivative(const input: single): single;
+      static function __arsinh_derivative(const input: real): real;
       begin
         result := 1/sqrt(input**2 + 1);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена Выгнутая тождественная функция активации
-      static function __bent_identity(const input: single): single;
+      static function __bent_identity(const input: real): real;
       begin
         result := (sqr(input**2+1)-1)/2 + input;
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная Выгнутой тождественной функции активации
-      static function __bent_identity_derivative(const input: single): single;
+      static function __bent_identity_derivative(const input: real): real;
       begin
         result := input/(2*sqr(input**2+1))+1;
       end;
  
       /// Возвращает вектор, к каждому члену которого применена функция активации Хевисайда
-      static function __binary_step(const input: single): single;
+      static function __binary_step(const input: real): real;
       begin
         if input < 0 then
           result := 0
@@ -82,7 +82,7 @@ type
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Хевисайда
-      static function __binary_step_derivative(const input: single): single;
+      static function __binary_step_derivative(const input: real): real;
       begin
         if input <> 0 then
           result := 0
@@ -90,7 +90,7 @@ type
           result := System.Double.NaN;
       end;
       
-      static function __elu(const input: single): single;
+      static function __elu(const input: real): real;
       begin
         if input > 0 then
           result := input
@@ -98,7 +98,7 @@ type
           result := elu_alpha*(exp(input)-1)
       end;
  
-      static function __elu_derivative(const input: single): single;
+      static function __elu_derivative(const input: real): real;
       begin
         if input > 0 then
           result := 1
@@ -107,40 +107,40 @@ type
       end;
             
       /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
-      static function __gaussian(const input: single): single;
+      static function __gaussian(const input: real): real;
       begin
         result := exp(-(input**2));
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная Гауссовой функции активации
-      static function __gaussian_derivative(const input: single): single;
+      static function __gaussian_derivative(const input: real): real;
       begin
         result := -2*input*exp(-(input**2));
       end;
       
       /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
-      static function __identity(const input: single): single;
+      static function __identity(const input: real): real;
       begin
         result := input
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная Тождественной функции активации
-      static function __identity_derivative(const input: single): single;
+      static function __identity_derivative(const input: real): real;
       begin
         result := 1
       end;
                   
-      static function __isru(const input: single): single;
+      static function __isru(const input: real): real;
       begin
         result := input/sqrt(1 + isru_alpha*input**2);
       end;
  
-      static function __isru_derivative(const input: single): single;
+      static function __isru_derivative(const input: real): real;
       begin
         result := (1/sqrt(1 + isru_derivative_alpha*input**2))**3;
       end;
       
-      static function __isrlu(const input: single): single;
+      static function __isrlu(const input: real): real;
       begin
         if input < 0 then
           result := input/sqrt(1 + isrlu_alpha*input**2)
@@ -148,7 +148,7 @@ type
           result := input
       end;
  
-      static function __isrlu_derivative(const input: single): single;
+      static function __isrlu_derivative(const input: real): real;
       begin
         if input < 0 then
           result := (1/sqrt(1 + isrlu_derivative_alpha*input**2))**3
@@ -156,12 +156,12 @@ type
           result := 1;
       end;
 
-      static function __plu(const input: single): single;
+      static function __plu(const input: real): real;
       begin
         result := max(plu_alpha*(input+plu_c)-plu_c, min(plu_alpha*(input-plu_c)+plu_c, input));
       end;
  
-      static function __plu_derivative(const input: single): single;
+      static function __plu_derivative(const input: real): real;
       begin
         if abs(input) > plu_derivative_c then
           result := plu_derivative_alpha
@@ -169,7 +169,7 @@ type
           result := 1;
       end;               
 
-      static function __prelu(const input: single): single;
+      static function __prelu(const input: real): real;
       begin
         if input < 0 then
           result := prelu_alpha*input
@@ -177,7 +177,7 @@ type
           result := input
       end;
  
-      static function __prelu_derivative(const input: single): single;
+      static function __prelu_derivative(const input: real): real;
       begin
         if input < 0 then
           result := prelu_derivative_alpha
@@ -186,7 +186,7 @@ type
       end;               
       
       /// Возвращает вектор, к каждому члену которого применена функция активации Линейный выпрямитель
-      static function __relu(const input: single): single;
+      static function __relu(const input: real): real;
       begin
         if input > 0 then
           result := input
@@ -195,7 +195,7 @@ type
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Линейный выпрямитель
-      static function __relu_derivative(const input: single): single;
+      static function __relu_derivative(const input: real): real;
       begin
         if input > 0 then
           result := 1
@@ -204,19 +204,19 @@ type
       end;
       
       /// Возвращает вектор, к каждому члену которого применена функция активации Сигмоида
-      static function __sigmoid(const input: single): single;
+      static function __sigmoid(const input: real): real;
       begin
         result := 1/(1+exp(-input))
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Сигмоида
-      static function __sigmoid_derivative(const input: single): single;
+      static function __sigmoid_derivative(const input: real): real;
       begin
         result := 1/(1+exp(-input))*(1-1/(1+exp(-input)));
       end;
                   
       /// Возвращает вектор, к каждому члену которого применена функция активации Кардинальный синус
-      static function __sinc(const input: single): single;
+      static function __sinc(const input: real): real;
       begin
         if input = 0 then
           result := 1
@@ -225,7 +225,7 @@ type
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Кардинальный синус
-      static function __sinc_derivative(const input: single): single;
+      static function __sinc_derivative(const input: real): real;
       begin
         if input = 0 then
           result := 0
@@ -234,19 +234,19 @@ type
       end;
    
       /// Возвращает вектор, к каждому члену которого применена функция активации Синусода
-      static function __sinusoid(const input: single): single;
+      static function __sinusoid(const input: real): real;
       begin
         result := sin(input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Синусода
-      static function __sinusoid_derivative(const input: single): single;
+      static function __sinusoid_derivative(const input: real): real;
       begin
         result := cos(input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена функция активации Softplus
-      static function __softexponential(const input: single): single;
+      static function __softexponential(const input: real): real;
       begin
         if softexponential_alpha < 0 then
           result := -ln(1-softexponential_alpha*(input+softexponential_alpha))/softexponential_alpha
@@ -257,7 +257,7 @@ type
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Softplus
-      static function __softexponential_derivative(const input: single): single;
+      static function __softexponential_derivative(const input: real): real;
       begin
         if softexponential_derivative_alpha < 0 then
           result := 1/(1 - softexponential_derivative_alpha*(softexponential_derivative_alpha+input))
@@ -266,31 +266,31 @@ type
       end;
 
       /// Возвращает вектор, к каждому члену которого применена функция активации Softplus
-      static function __softplus(const input: single): single;
+      static function __softplus(const input: real): real;
       begin
         result := ln(1+exp(input));
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Softplus
-      static function __softplus_derivative(const input: single): single;
+      static function __softplus_derivative(const input: real): real;
       begin
         result := 1/(1+exp(-input));
       end;
                           
       /// Возвращает вектор, к каждому члену которого применена функция активации Softsign
-      static function __softsign(const input: single): single;
+      static function __softsign(const input: real): real;
       begin
         result := input/(1+abs(input));
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Softsign
-      static function __softsign_derivative(const input: single): single;
+      static function __softsign_derivative(const input: real): real;
       begin
         result := 1/(1+abs(input))**2;
       end;
  
       /// Возвращает вектор, к каждому члену которого применена Квадратная радиальная базисная функция активации
-      static function __sqrbf(const input: single): single;
+      static function __sqrbf(const input: real): real;
       begin
         if abs(input) < 1 then
           result := 1 - input**2/2
@@ -301,7 +301,7 @@ type
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная Квадратной радиальной базисной функции активации
-      static function __sqrbf_derivative(const input: single): single;
+      static function __sqrbf_derivative(const input: real): real;
       begin
         if abs(input) < 1 then
           result := -input
@@ -311,7 +311,7 @@ type
           result := input - 2*sign(input);
       end;
       /// Возвращает вектор, к каждому члену которого применена функция активации Линейный выпрямитель
-      static function __srelu(const input: single): single;
+      static function __srelu(const input: real): real;
       begin
       if input <= srelu_tl then
         result := srelu_tl + srelu_al*(input - srelu_tl)
@@ -322,7 +322,7 @@ type
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Линейный выпрямитель
-      static function __srelu_derivative(const input: single): single;
+      static function __srelu_derivative(const input: real): real;
       begin
         if input <= srelu_derivative_tl then
           result := srelu_derivative_al
@@ -333,268 +333,196 @@ type
       end;
       
       /// Возвращает вектор, к каждому члену которого применена функции активации Гиперболический тангенс
-      static function __tanh(const input: single): single;
+      static function __tanh(const input: real): real;
       begin
         result := System.Math.Tanh(input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Гиперболический тангенс
-      static function __tanh_derivative(const input: single): single;
+      static function __tanh_derivative(const input: real): real;
       begin
         result := 1-System.Math.Tanh(input)**2;
       end;
 
     public
       /// Возвращает вектор, к каждому члену которого применена функции активации Арктангенс
-      static function arctan(const input: Vector): Vector;
+      static function arctan(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __arctan(input[index]);
+        result := neo.map(__arctan, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Арктангенс
-      static function arctan_derivative(const input: Vector): Vector;
+      static function arctan_derivative(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __arctan_derivative(input[index]);
+        result := neo.map(__arctan_derivative, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена функция активации Ареасинус
-      static function arsinh(const input: Vector): Vector;
+      static function arsinh(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __arsinh(input[index]);
+        result := neo.map(__arsinh, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Ареасинус
-      static function arsinh_derivative(const input: Vector): Vector;
+      static function arsinh_derivative(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __arsinh_derivative(input[index]);
+        result := neo.map(__arsinh_derivative, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена Выгнутая тождественная функция активации
-      static function bent_identity(const input: Vector): Vector;
+      static function bent_identity(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __bent_identity(input[index]);
+        result := neo.map(__bent_identity, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная Выгнутой тождественной функции активации
-      static function bent_identity_derivative(const input: Vector): Vector;
+      static function bent_identity_derivative(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __bent_identity_derivative(input[index]);
+        result := neo.map(__bent_identity_derivative, input);
       end;
  
       /// Возвращает вектор, к каждому члену которого применена функция активации Хевисайда
-      static function binary_step(const input: Vector): Vector;
+      static function binary_step(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __binary_step(input[index]);
+        result := neo.map(__binary_step, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Хевисайда
-      static function binary_step_derivative(const input: Vector): Vector;
+      static function binary_step_derivative(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __binary_step_derivative(input[index]);
+        result := neo.map(__binary_step_derivative, input);
       end;
 
-      /// Возвращает вектор, к каждому члену которого применена функция активации Биполярный линейный выпрямитель
-      static function brelu(const input: Vector): Vector;
-      begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          if index mod 2 = 0 then
-            result[index] := __relu(input[index])
-          else
-            result[index] := -__relu(input[index]);
-      end;
+//      /// Возвращает вектор, к каждому члену которого применена функция активации Биполярный линейный выпрямитель
+//      static function brelu(const input: neo.neo_array): neo.neo_array;
+//      begin
+//        result := new neo.neo_array(input.shape()[0], input.shape()[1]);
+//        result.set_size(input.size);
+//        {$omp parallel for}
+//        for var index := 0 to input.shape()[0] do
+//          if index mod 2 = 0 then
+//            result[index] := __relu(input[index])
+//          else
+//            result[index] := -__relu(input[index]);
+//      end;
       
-      /// Возвращает вектор, к каждому члену которого применена производная функции активации Биполярный линейный выпрямитель
-      static function brelu_derivative(const input: Vector): Vector;
-      begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          if index mod 2 = 0 then
-            result[index] := __relu_derivative(input[index])
-          else
-            result[index] := __relu_derivative(-input[index]);
-      end;
+//      /// Возвращает вектор, к каждому члену которого применена производная функции активации Биполярный линейный выпрямитель
+//      static function brelu_derivative(const input: neo.neo_array): neo.neo_array;
+//      begin
+//        result := new neo.neo_array;
+//        result.set_size(input.size);
+//        {$omp parallel for}
+//        for var index := 0 to input.size-1 do
+//          if index mod 2 = 0 then
+//            result[index] := __relu_derivative(input[index])
+//          else
+//            result[index] := __relu_derivative(-input[index]);
+//      end;
 
       /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
-      static function elu(const alpha: single): function(const input: Vector):Vector;
+      static function elu(const alpha: real): function(const input: neo.neo_array):neo.neo_array;
       begin
         functions.elu_alpha := alpha;
         result := _elu;
       end;
 
       /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
-      static function _elu(const input: Vector): Vector;
+      static function _elu(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __elu(input[index]);
+        result := neo.map(__elu, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
-      static function elu_derivative(const alpha: single): function(const input: Vector):Vector;
+      static function elu_derivative(const alpha: real): function(const input: neo.neo_array):neo.neo_array;
       begin
         functions.elu_derivative_alpha := alpha;
         result := _elu_derivative;
       end;
 
       /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
-      static function _elu_derivative(const input: Vector): Vector;
+      static function _elu_derivative(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __elu_derivative(input[index]);
+        result := neo.map(__elu_derivative, input);
       end;
       
 
-      static function gaussian(const input: Vector): Vector;
+      static function gaussian(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __gaussian(input[index]);
+        result := neo.map(__gaussian, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная Гауссовой функции активации
-      static function gaussian_derivative(const input: Vector): Vector;
+      static function gaussian_derivative(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __gaussian_derivative(input[index]);
+        result := neo.map(__gaussian_derivative, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
-      static function identity(const input: Vector): Vector;
+      static function identity(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __identity(input[index]);
+        result := neo.map(__identity, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная Тождественной функции активации
-      static function identity_derivative(const input: Vector): Vector;
+      static function identity_derivative(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __identity_derivative(input[index]);
+        result := neo.map(__identity_derivative, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
-      static function isru(const alpha: single): function(const input: Vector):Vector;
+      static function isru(const alpha: real): function(const input: neo.neo_array):neo.neo_array;
       begin
         functions.isru_alpha := alpha;
         result := _isru;
       end;
 
       /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
-      static function _isru(const input: Vector): Vector;
+      static function _isru(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __isru(input[index]);
+        result := neo.map(__isru, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
-      static function isru_derivative(const alpha: single): function(const input: Vector):Vector;
+      static function isru_derivative(const alpha: real): function(const input: neo.neo_array):neo.neo_array;
       begin
         functions.isru_derivative_alpha := alpha;
         result := _isru_derivative;
       end;
 
       /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
-      static function _isru_derivative(const input: Vector): Vector;
+      static function _isru_derivative(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __isru_derivative(input[index]);
+        result := neo.map(__isru_derivative, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
-      static function isrlu(const alpha: single): function(const input: Vector):Vector;
+      static function isrlu(const alpha: real): function(const input: neo.neo_array):neo.neo_array;
       begin
         functions.isrlu_alpha := alpha;
         result := _isrlu;
       end;
 
       /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
-      static function _isrlu(const input: Vector): Vector;
+      static function _isrlu(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __isrlu(input[index]);
+        result := neo.map(__isrlu, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
-      static function isrlu_derivative(const alpha: single): function(const input: Vector):Vector;
+      static function isrlu_derivative(const alpha: real): function(const input: neo.neo_array):neo.neo_array;
       begin
         functions.isrlu_derivative_alpha := alpha;
         result := _isrlu_derivative;
       end;
 
       /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
-      static function _isrlu_derivative(const input: Vector): Vector;
+      static function _isrlu_derivative(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __isrlu_derivative(input[index]);
+        result := neo.map(__isrlu_derivative, input);
       end;
               
       /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
-      static function plu(const alpha, c: single): function(const input: Vector):Vector;
+      static function plu(const alpha, c: real): function(const input: neo.neo_array):neo.neo_array;
       begin
         functions.plu_alpha := alpha;
         functions.plu_c := c;
@@ -602,17 +530,13 @@ type
       end;
 
       /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
-      static function _plu(const input: Vector): Vector;
+      static function _plu(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __plu(input[index]);
+        result := neo.map(__plu, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
-      static function plu_derivative(const alpha, c: single): function(const input: Vector):Vector;
+      static function plu_derivative(const alpha, c: real): function(const input: neo.neo_array):neo.neo_array;
       begin
         functions.plu_derivative_alpha := alpha;
         functions.plu_derivative_c := c;
@@ -620,245 +544,170 @@ type
       end;
 
       /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
-      static function _plu_derivative(const input: Vector): Vector;
+      static function _plu_derivative(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __plu_derivative(input[index]);
+        result := neo.map(__plu_derivative, input);
       end;         
            
       /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
-      static function prelu(const alpha: single): function(const input: Vector):Vector;
+      static function prelu(const alpha: real): function(const input: neo.neo_array):neo.neo_array;
       begin
         functions.prelu_alpha := alpha;
         result := _prelu;
       end;
 
       /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
-      static function _prelu(const input: Vector): Vector;
+      static function _prelu(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __prelu(input[index]);
+        result := neo.map(__prelu, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
-      static function prelu_derivative(const alpha: single): function(const input: Vector):Vector;
+      static function prelu_derivative(const alpha: real): function(const input: neo.neo_array):neo.neo_array;
       begin
         functions.prelu_derivative_alpha := alpha;
         result := _prelu_derivative;
       end;
 
       /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
-      static function _prelu_derivative(const input: Vector): Vector;
+      static function _prelu_derivative(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __prelu_derivative(input[index]);
+        result := neo.map(__prelu_derivative, input);
       end;            
            
       /// Возвращает вектор, к каждому члену которого применена функция активации Линейный выпрямитель
-      static function relu(const input: Vector): Vector;
+      static function relu(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __relu(input[index]);
+        result := neo.map(__relu, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Линейный выпрямитель
-      static function relu_derivative(const input: Vector): Vector;
+      static function relu_derivative(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __relu_derivative(input[index]);
+        result := neo.map(__relu_derivative, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена функция активации Сигмоида
-      static function sigmoid(const input: Vector): Vector;
+      static function sigmoid(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __sigmoid(input[index]);
+        result := neo.map(__sigmoid, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Сигмоида
-      static function sigmoid_derivative(const input: Vector): Vector;
+      static function sigmoid_derivative(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __sigmoid_derivative(input[index]);
+        result := neo.map(__sigmoid_derivative, input);
       end;
                   
       /// Возвращает вектор, к каждому члену которого применена функция активации Кардинальный синус
-      static function sinc(const input: Vector): Vector;
+      static function sinc(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __sinc(input[index]);
+        result := neo.map(__sinc, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Кардинальный синус
-      static function sinc_derivative(const input: Vector): Vector;
+      static function sinc_derivative(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __sinc_derivative(input[index]);
+        result := neo.map(__sinc_derivative, input);
       end;
    
       /// Возвращает вектор, к каждому члену которого применена функция активации Синусода
-      static function sinusoid(const input: Vector): Vector;
+      static function sinusoid(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __sinusoid(input[index]);
+        result := neo.map(__sinusoid, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Синусода
-      static function sinusoid_derivative(const input: Vector): Vector;
+      static function sinusoid_derivative(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __sinusoid_derivative(input[index]);
+        result := neo.map(__sinusoid_derivative, input);
       end;
                        
       /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
-      static function softexponential(const alpha: single): function(const input: Vector):Vector;
+      static function softexponential(const alpha: real): function(const input: neo.neo_array):neo.neo_array;
       begin
         functions.softexponential_alpha := alpha;
         result := _softexponential;
       end;
 
       /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
-      static function _softexponential(const input: Vector): Vector;
+      static function _softexponential(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __softexponential(input[index]);
+        result := neo.map(__softexponential, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
-      static function softexponential_derivative(const alpha: single): function(const input: Vector):Vector;
+      static function softexponential_derivative(const alpha: real): function(const input: neo.neo_array):neo.neo_array;
       begin
         functions.softexponential_derivative_alpha := alpha;
         result := _softexponential_derivative;
       end;
 
       /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
-      static function _softexponential_derivative(const input: Vector): Vector;
+      static function _softexponential_derivative(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __softexponential_derivative(input[index]);
+        result := neo.map(__softexponential_derivative, input);
       end;            
            
-      /// Возвращает вектор, к каждому члену которого применена функция активации Softmax
-      static function softmax(const input: Vector): Vector;
-      begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := exp(input[index]);
-        var sum := result.sum();
-        result /= sum;
-      end;
-      
-      /// Возвращает вектор, к каждому члену которого применена производная функции активации Softmax
-      static function softmax_derivative(const input: Vector): Vector;
-      begin
-        result := softmax(input);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := result[index]*(1-result[index]);
-      end;
+//      /// Возвращает вектор, к каждому члену которого применена функция активации Softmax
+//      static function softmax(const input: neo.neo_array): neo.neo_array;
+//      begin
+//        result := new neo.neo_array(input.shapes());
+//        result.set_size(input.size);
+//        {$omp parallel for}
+//        for var index := 0 to input.size-1 do
+//          result[index] := exp(input[index]);
+//        var sum := result.sum();
+//        result /= sum;
+//      end;
+//      
+//      /// Возвращает вектор, к каждому члену которого применена производная функции активации Softmax
+//      static function softmax_derivative(const input: neo.neo_array): neo.neo_array;
+//      begin
+//        result := softmax(input);
+//        {$omp parallel for}
+//        for var index := 0 to input.size-1 do
+//          result[index] := result[index]*(1-result[index]);
+//      end;
 
       /// Возвращает вектор, к каждому члену которого применена функция активации Softplus
-      static function softplus(const input: Vector): Vector;
+      static function softplus(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __softplus(input[index]);
+        result := neo.map(__softplus, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Softplus
-      static function softplus_derivative(const input: Vector): Vector;
+      static function softplus_derivative(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __softplus_derivative(input[index]);
+        result := neo.map(__softplus_derivative, input);
       end;
                           
       /// Возвращает вектор, к каждому члену которого применена функция активации Softsign
-      static function softsign(const input: Vector): Vector;
+      static function softsign(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __softsign(input[index]);
+        result := neo.map(__softsign, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Softsign
-      static function softsign_derivative(const input: Vector): Vector;
+      static function softsign_derivative(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __softsign_derivative(input[index]);
+        result := neo.map(__softsign_derivative, input);
       end;
  
       /// Возвращает вектор, к каждому члену которого применена Квадратная радиальная базисная функция активации
-      static function sqrbf(const input: Vector): Vector;
+      static function sqrbf(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __sqrbf(input[index]);
+        result := neo.map(__sqrbf, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная Квадратной радиальной базисной функции активации
-      static function sqrbf_derivative(const input: Vector): Vector;
+      static function sqrbf_derivative(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __sqrbf_derivative(input[index]);
+        result := neo.map(__sqrbf_derivative, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
-      static function srelu(const al, ar, tl, tr: single): function(const input: Vector):Vector;
+      static function srelu(const al, ar, tl, tr: real): function(const input: neo.neo_array):neo.neo_array;
       begin
         functions.srelu_al := al;
         functions.srelu_ar := ar;
@@ -868,17 +717,13 @@ type
       end;
 
       /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
-      static function _srelu(const input: Vector): Vector;
+      static function _srelu(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __srelu(input[index]);
+        result := neo.map(__srelu, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена Тождественная функция активации
-      static function srelu_derivative(const al, ar, tl, tr: single): function(const input: Vector):Vector;
+      static function srelu_derivative(const al, ar, tl, tr: real): function(const input: neo.neo_array):neo.neo_array;
       begin
         functions.srelu_derivative_al := al;
         functions.srelu_derivative_ar := ar;
@@ -888,73 +733,61 @@ type
       end;
 
       /// Возвращает вектор, к каждому члену которого применена Гауссова функция активации
-      static function _srelu_derivative(const input: Vector): Vector;
+      static function _srelu_derivative(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __srelu_derivative(input[index]);
+        result := neo.map(__srelu_derivative, input);
       end;  
 
       /// Возвращает вектор, к каждому члену которого применена функции активации Гиперболический тангенс
-      static function tanh(const input: Vector): Vector;
+      static function tanh(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __tanh(input[index]);
+        result := neo.map(__tanh, input);
       end;
       
       /// Возвращает вектор, к каждому члену которого применена производная функции активации Гиперболический тангенс
-      static function tanh_derivative(const input: Vector): Vector;
+      static function tanh_derivative(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
-        result.set_size(input.size);
-        {$omp parallel for}
-        for var index := 0 to input.size-1 do
-          result[index] := __tanh_derivative(input[index]);
+        result := neo.map(__tanh_derivative, input);
       end;
   end;
   
-  loss_functions_type = function(const true_answer, received_answer: Vector): real;
+  loss_functions_type = function(const true_answer, received_answer: neo.neo_array): real;
 
   loss_functions = class
     public
-      static function arctan(const true_answer, received_answer: Vector): real;
+      static function tmp_sqr(x: real): real;
       begin
-        result := ((true_answer-received_answer)**2).sum()/received_answer.size()
+        result := x**2;
       end;
     
-      static function mse(const true_answer, received_answer: Vector): real;
+      static function mse(const true_answer, received_answer: neo.neo_array): real;
       begin
-        result := ((true_answer-received_answer)**2).sum()/received_answer.size();
+        result := neo.map(tmp_sqr, (true_answer-received_answer)).sum()/received_answer.shapes()[0];
       end;
 
-      static function root_mse(const true_answer, received_answer: Vector): real;
+      static function root_mse(const true_answer, received_answer: neo.neo_array): real;
       begin
-        result := System.Math.Sqrt(((true_answer-received_answer)**2).sum()/received_answer.size());
+        result := System.Math.Sqrt(neo.map(tmp_sqr, (true_answer-received_answer)).sum()/received_answer.shapes()[0]);
       end;
 
   end;
 
   Neuron = class
     private
-      weights: Vector; 
-      input: Vector;
+      weights: neo.neo_array; 
+      input: neo.neo_array;
       
       /// Иницилизирует number_of_weights случайных весов в диапазоне [0, 1)
-      function initialize_weights(const number_of_weights: uint64): Vector;
+      function initialize_weights(const number_of_weights: uint64): neo.neo_array;
       var
-        tmp_result: array of single;
+        tmp_result: array of real;
       begin
-        tmp_result := new single[number_of_weights];
+        tmp_result := new real[number_of_weights];
         {$omp parallel for}
         for var index := 0 to number_of_weights-1 do
           tmp_result[index] := random(global_initializing_weights_range[0],
                                       global_initializing_weights_range[1]);
-        result := new Vector(tmp_result);
+        result := new neo.neo_array(tmp_result);
       end;
       
     public
@@ -965,22 +798,22 @@ type
       end;
       
       /// Возвращает ненормализированный выход нейрона
-      function calculate(const input: Vector): single;
+      function calculate(const input: neo.neo_array): real;
       begin
         self.input := input;
-        result := self.weights.dot(self.input);
+//        result := self.weights.dot(self.input);
       end;
 
       /// Возвращает вектор ошибок для предшестующих нейронов 
-      function backprop(const input: single): Vector;
+      function backprop(const input: real): neo.neo_array;
       begin
         result := self.weights * input;
       end;
       
       /// Изменяет веса с учетом ошибки delta
-      procedure adjust_weights(const delta: single);
+      procedure adjust_weights(const delta: real);
       begin
-        self.weights += self.input * delta * global_alpha;
+        self.weights := self.weights + self.input * delta * global_alpha;
       end;
       
       function ToString: string; override;
@@ -1007,9 +840,9 @@ type
       end;
       
       /// Возвращает ненормализированный вектор выходных значений слоя
-      function calculate(const input: Vector): Vector;
+      function calculate(const input: neo.neo_array): neo.neo_array;
       begin
-        result := new Vector;
+        result := neo.map();
         result.set_size(self.layer.Length);
         {$omp parallel for}
         for var index := 0 to self.layer.length-1 do
@@ -1017,7 +850,7 @@ type
       end;
       
       /// Возвращает вектор ошибок для предшестующих слоев 
-      function backprop(const input: Vector): Vector;
+      function backprop(const input: neo.neo_array): neo.neo_array;
       begin
         result := self.layer[0].backprop(input[0]);
         {$omp parallel for reduction(+:result)}
@@ -1026,7 +859,7 @@ type
       end;
       
       /// Изменяет веса нейронов слоя с учетом ошибки delta
-      procedure adjust_weights(const delta: Vector);
+      procedure adjust_weights(const delta: neo.neo_array);
       begin
         {$omp parallel for}
         for var index := 0 to self.layer.Length-1 do
@@ -1047,35 +880,35 @@ type
       seed: integer;
     
       neural_network: array of Layer;
-      topology: Vector;
+      topology: neo.neo_array;
       number_of_layers: uint64;
-      activation_functions: array of function(const input: Vector): Vector;
+      activation_functions: array of function(const input: neo.neo_array): neo.neo_array;
       activation_functions_derivatives: array of nntk.functions_type;
       loss_function: loss_functions_type;
       batch_size: uint64;
 
       /// Обучает нейронную сеть на входных данных input_data и выходных данных output_data number_of_epoch эпох 
-      procedure __train(const train_input_data: List<Vector>; 
-                        const train_output_data: List<Vector>;
-                        const test_input_data: List<Vector>;
-                        const test_output_data: List<Vector>;
+      procedure __train(const train_input_data: List<neo.neo_array>; 
+                        const train_output_data: List<neo.neo_array>;
+                        const test_input_data: List<neo.neo_array>;
+                        const test_output_data: List<neo.neo_array>;
                         const number_of_epoch: uint64);
       var
-        deltas: array of Vector;
-        layers: array of Vector;
-        mask: array of Vector;
+        deltas: array of neo.neo_array;
+        layers: array of neo.neo_array;
+        mask: array of neo.neo_array;
         error: real;
         test_error: real;
       begin
-        deltas := new Vector[self.number_of_layers-1]; 
+        deltas := new neo.neo_array[self.number_of_layers-1]; 
         {$omp parallel for}
         for var index := 0 to self.number_of_layers-2 do
           begin
-          deltas[index] := new Vector;
+          deltas[index] := new neo.neo_array;
           deltas[index].set_size(trunc(topology[self.number_of_layers-index-1]));
           end;
-        layers := new Vector[self.number_of_layers];
-        mask := new Vector[self.number_of_layers-1];
+        layers := new neo.neo_array[self.number_of_layers];
+        mask := new neo.neo_array[self.number_of_layers-1];
 
         for var epoch := 1 to number_of_epoch do
         begin 
@@ -1106,7 +939,7 @@ type
                 for var i := 0 to self.number_of_layers-2 do
                 begin
                   self.neural_network[i].adjust_weights(deltas[self.number_of_layers-2-i]/self.batch_size);
-                  deltas[self.number_of_layers-2-i] := new Vector;
+                  deltas[self.number_of_layers-2-i] := new neo.neo_array;
                   deltas[self.number_of_layers-2-i].set_size(trunc(topology[i+1]));
                   end;
             end;
@@ -1129,7 +962,7 @@ type
       
     public
       /// Инициализирует объект класса Neural_Network с заданной топологией
-      constructor Create(const neural_network_topology: Vector;
+      constructor Create(const neural_network_topology: neo.neo_array;
                          initializing_weights_range: System.Tuple<real, real> := (-1.0, 1.0);
                          activation_functions: array of nntk.functions_type := nil;
                          activation_functions_derivatives: array of nntk.functions_type := nil;
@@ -1187,14 +1020,14 @@ type
       /// Производная фукции активации activation_function_derivative (по умолчанию nntk.functions.relu_derivative)
       /// Вероятность прореживания dropout_probability (по умолчанию 0.0 - Прореживание не проводится)
       /// Размер пакета разности весов batch_size (по умолчанию 1 - Обучение происходит на каждом отдельном примере)
-      procedure train(const train_input_data: array of Vector; 
-                      const train_output_data: array of Vector;
-                      const test_input_data: array of Vector; 
-                      const test_output_data: array of Vector;
+      procedure train(const train_input_data: array of neo.neo_array; 
+                      const train_output_data: array of neo.neo_array;
+                      const test_input_data: array of neo.neo_array; 
+                      const test_output_data: array of neo.neo_array;
                       const number_of_epoch: uint64;
-                      alpha: single := 0.01;
+                      alpha: real := 0.01;
                       loss_function: loss_functions_type := nntk.loss_functions.mse;
-                      dropout_probability: single := 0.0;
+                      dropout_probability: real := 0.0;
                       batch_size: uint64 := 1);
                       
       begin
@@ -1208,20 +1041,20 @@ type
         if batch_size < 1 then
           raise new System.ArgumentException('Размер пакетов разности весов должен быть больше нуля');
         self.batch_size := batch_size;        
-        __train(new List<Vector>(train_input_data), 
-                new List<Vector>(train_output_data), 
-                new List<Vector>(test_input_data), 
-                new List<Vector>(test_output_data), 
+        __train(new List<neo.neo_array>(train_input_data), 
+                new List<neo.neo_array>(train_output_data), 
+                new List<neo.neo_array>(test_input_data), 
+                new List<neo.neo_array>(test_output_data), 
                 number_of_epoch);
 
       end;
 
       /// Возвращает результат работы нейронной сети для входных данных input_data
-      function run(const input_data: Vector): Vector;
+      function run(const input_data: neo.neo_array): neo.neo_array;
       begin
       if input_data.size() <> self.topology[0] then
           raise new System.ArgumentException('Размеры первого слоя ИНС и входных данных должны совпадать');  
-      var layers := new Vector[self.number_of_layers];
+      var layers := new neo.neo_array[self.number_of_layers];
       layers[0] := input_data;
       for var i := 0 to self.number_of_layers-2 do
         layers[i+1] := self.activation_functions[i](self.neural_network[i].calculate(layers[i]));
@@ -1229,15 +1062,15 @@ type
       end;
       
       /// Возвращает модель нейронной сети в виде функции
-      function get_model(): function (input_data: Vector): Vector;
+      function get_model(): function (input_data: neo.neo_array): neo.neo_array;
       begin
         result := self.run;
       end;
       
       /// Возвращает модель вектор прореживания
-      function get_dropout_mask(const size: uint64): Vector;
+      function get_dropout_mask(const size: uint64): neo.neo_array;
       begin
-        result := new Vector;
+        result := new neo.neo_array;
         result.set_size(size);
         {$omp parallel for}
         for var index := 0 to size-1 do
@@ -1251,12 +1084,12 @@ type
       static id_counter := 0;
       data: neo.neo_array;
       autograde: boolean;
+      creators: array of Tensor := nil;
+      children: Dictionary<integer, integer>;
       creation_op: string;
       grad: Tensor := nil;
       
     public
-      creators: array of Tensor := nil;
-      children: Dictionary<integer, integer>;
     
       constructor Create(data: neo.neo_array; 
                          autograde: boolean := False;
@@ -1290,7 +1123,7 @@ type
         begin
           if grad_origin <> nil then
             if self.children[grad_origin.id] = 0 then
-              println('cannot backprop more than once')
+              raise new Exception('cannot backprop more than once')
             else
               self.children[grad_origin.id] -= 1;
           if self.grad <> nil then
@@ -1414,22 +1247,22 @@ type
 //          result := new Tensor(self.data.dot(other_tensor.data), False, nil, 'mm')
 //        end;
       
-      function ToString: string; override;
-      begin
-        result += self.data.ToString + ': ';
-        for var index := 0 to self.data.value.Length-2 do
-          result += self.data.value[0, index] + ', ';
-        result += self.data.value[0, self.data.value.Length-1].ToString + ' (';
-
-        if self.creators <> nil then
-          for var index := 0 to self.creators.Length-1 do
-            result += self.creators[index].ToString + ', ';
-        result += ')('+self.creation_op+')(';
-        if self.grad <> nil then
-          for var index := 0 to self.grad.data.value.Length-1 do
-            result += self.grad.data.value[0, index].ToString + ', ';
-        result += ')';
-      end;
+//      function ToString: string; override;
+//      begin
+//        result += self.data.ToString + ': ';
+//        for var index := 0 to self.data.shapes()[0] do
+//          result += self.data[0, index] + ', ';
+//        result += self.data[0, self.data.Length-1].ToString + ' (';
+//
+//        if self.creators <> nil then
+//          for var index := 0 to self.creators.Length-1 do
+//            result += self.creators[index].ToString + ', ';
+//        result += ')('+self.creation_op+')(';
+//        if self.grad <> nil then
+//          for var index := 0 to self.grad.data.Length-1 do
+//            result += self.grad.data[0, index].ToString + ', ';
+//        result += ')';
+//      end;
   end;
   
 end.
