@@ -801,8 +801,7 @@ type
       function calculate(input: neo.neo_array): real;
       begin
         self.input := input;
-        var x := new neo.neo_array(self.input.values);
-        var tmp := neo.multiply(self.weights, x);
+        var tmp := neo.multiply(self.weights, input);
         result := real.Parse(neo.sum(tmp).ToString);
       end;
 
